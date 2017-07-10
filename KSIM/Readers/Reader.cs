@@ -13,6 +13,8 @@ namespace KSIM.Readers
         public abstract Frame read(MultiSourceFrame f);
     }
 
+    // All frame types start internally from 1
+    // i.e. if a client sends all zeros that is invalid frame type
     public enum FrameType { Color=1, Skeleton, Audio, Depth, ClosestBody, LHDepth, RHDepth, HeadDepth };
 
     public abstract class Frame : IDisposable

@@ -21,14 +21,14 @@ namespace KSIM.Readers
 
             var cbr = new ClosestBodyReader();
 
-            ClosestBodyReader.ClosestBodyFrame cbf = (ClosestBodyReader.ClosestBodyFrame)cbr.read(f);
+            ClosestBodyFrame cbf = (ClosestBodyFrame)cbr.read(f);
             return new RHDepthFrame(originalDepthFrame, cbf);
         }
     }
 
     public sealed class RHDepthFrame : SegmentedDepthFrame
     {
-        public RHDepthFrame(Microsoft.Kinect.DepthFrame df, ClosestBodyReader.ClosestBodyFrame cbf) : base(df, cbf)
+        public RHDepthFrame(Microsoft.Kinect.DepthFrame df, ClosestBodyFrame cbf) : base(df, cbf)
         {
             Type = FrameType.RHDepth;
         }

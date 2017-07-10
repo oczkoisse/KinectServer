@@ -9,11 +9,11 @@ using System.IO;
 
 namespace KSIM.Readers
 {
-    public abstract class SegmentedDepthFrame : KSIM.Readers.DepthReader.DepthFrame
+    public abstract class SegmentedDepthFrame : KSIM.Readers.DepthFrame
     {
-        private ClosestBodyReader.ClosestBodyFrame underlyingClosestBodyFrame = null;
+        private ClosestBodyFrame underlyingClosestBodyFrame = null;
 
-        protected ClosestBodyReader.ClosestBodyFrame UnderlyingClosestBodyFrame
+        protected ClosestBodyFrame UnderlyingClosestBodyFrame
         {
             get { return underlyingClosestBodyFrame;  }
         }
@@ -29,7 +29,7 @@ namespace KSIM.Readers
             get { return segmentedHeight; }
         }
 
-        public SegmentedDepthFrame(Microsoft.Kinect.DepthFrame df, ClosestBodyReader.ClosestBodyFrame cbf) : base(df)
+        public SegmentedDepthFrame(Microsoft.Kinect.DepthFrame df, ClosestBodyFrame cbf) : base(df)
         {
             underlyingClosestBodyFrame = cbf;
 
