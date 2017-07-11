@@ -48,7 +48,7 @@ namespace KSIM.Readers
         public long Timestamp
         {
             get { return timestamp; }
-            protected set { timestamp = value; }
+            set { timestamp = value; }
         }
 
         // Note that serialization will follow little-endian format, even for network transfers

@@ -48,7 +48,7 @@ namespace KSIM.Readers
         {
             get
             {
-                return closestBody.TrackingId;
+                return BodyFound ? closestBody.TrackingId : 0;
             }
         }
 
@@ -56,7 +56,7 @@ namespace KSIM.Readers
         {
             get
             {
-                return closestBody.HandLeftConfidence;
+                return BodyFound ? closestBody.HandLeftConfidence: TrackingConfidence.Low;
             }
         }
 
@@ -64,7 +64,7 @@ namespace KSIM.Readers
         {
             get
             {
-                return closestBody.HandLeftConfidence;
+                return BodyFound ? closestBody.HandLeftConfidence : TrackingConfidence.Low;
             }
         }
 
@@ -72,7 +72,7 @@ namespace KSIM.Readers
         {
             get
             {
-                return closestBody.HandLeftState;
+                return BodyFound ? closestBody.HandLeftState : HandState.NotTracked;
             }
         }
 
@@ -80,18 +80,18 @@ namespace KSIM.Readers
         {
             get
             {
-                return closestBody.HandRightState;
+                return BodyFound ? closestBody.HandRightState : HandState.NotTracked;
             }
         }
 
         public IReadOnlyDictionary<JointType, Joint> Joints
         {
-            get { return closestBody.Joints; }
+            get { return BodyFound ? closestBody.Joints : null; }
         }
 
         public IReadOnlyDictionary<JointType, JointOrientation> JointOrientations
         {
-            get { return closestBody.JointOrientations; }
+            get { return BodyFound ? closestBody.JointOrientations : null; }
         }
 
         public ClosestBodyFrame(Microsoft.Kinect.BodyFrame bf)
@@ -99,9 +99,8 @@ namespace KSIM.Readers
             Type = FrameType.ClosestBody;
             this.underlyingBodyFrame = bf;
 
-            List<Body> bodies = new List<Body>(bf.BodyCount);
+            Body[] bodies = new Body[bf.BodyCount];
             bf.GetAndRefreshBodyData(bodies);
-
             double closestNormSqr = Double.MaxValue;
             foreach (Body body in bodies)
             {
@@ -124,6 +123,7 @@ namespace KSIM.Readers
                     trackedCount++;
                 }
             }
+            //Console.WriteLine("Number of tracked bodies: {0}", trackedCount);
         }
 
         public override void Serialize(Stream s)
@@ -158,36 +158,39 @@ namespace KSIM.Readers
                 writer.Write(Timestamp);
 
                 writer.Write(TrackedCount);
-                writer.Write(TrackingId);
 
-                writer.Write((byte)HandLeftConfidence);
-                writer.Write((byte)HandLeftState);
-
-                writer.Write((byte)HandRightConfidence);
-                writer.Write((byte)HandRightState);
-
-                // Assume we'll always have orientation for a joint that has a position
-                foreach (JointType j in Joints.Keys)
+                if (BodyFound)
                 {
-                    Joint joint = Joints[j];
-                    JointOrientation jointOrient = JointOrientations[j];
+                    writer.Write(TrackingId);
 
-                    writer.Write((byte)j);
-                    writer.Write((byte)joint.TrackingState);
+                    writer.Write((byte)HandLeftConfidence);
+                    writer.Write((byte)HandLeftState);
 
-                    writer.Write(joint.Position.X);
-                    writer.Write(joint.Position.Y);
-                    writer.Write(joint.Position.Z);
+                    writer.Write((byte)HandRightConfidence);
+                    writer.Write((byte)HandRightState);
+                    
+                    // Assume we'll always have orientation for a joint that has a position
+                    foreach (JointType j in Joints.Keys)
+                    {
+                        Joint joint = Joints[j];
+                        JointOrientation jointOrient = JointOrientations[j];
 
-                    writer.Write(jointOrient.Orientation.W);
-                    writer.Write(jointOrient.Orientation.X);
-                    writer.Write(jointOrient.Orientation.Y);
-                    writer.Write(jointOrient.Orientation.Z);
+                        writer.Write((byte)j);
+                        writer.Write((byte)joint.TrackingState);
+
+                        writer.Write(joint.Position.X);
+                        writer.Write(joint.Position.Y);
+                        writer.Write(joint.Position.Z);
+
+                        writer.Write(jointOrient.Orientation.W);
+                        writer.Write(jointOrient.Orientation.X);
+                        writer.Write(jointOrient.Orientation.Y);
+                        writer.Write(jointOrient.Orientation.Z);
+                    }
                 }
 
                 // Rewind back to write the load size in the first 4 bytes
                 long loadSize = writer.Seek(0, SeekOrigin.Current);
-
                 writer.Seek(0, SeekOrigin.Begin);
                 writer.Write((int)(loadSize - sizeof(int)));
                 writer.Seek(0, SeekOrigin.End);
