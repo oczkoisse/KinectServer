@@ -135,6 +135,7 @@ namespace KSIM
                 // We are ensured that all the subscribed frames have already been cached
                 foreach (var client in connectedClients.Keys)
                 {
+                    // Send all subscribed frames to client together to avoid synchronization issues between subscribed streams
                     foreach(var frameType in connectedClients[client])
                     {
                         using (var ms = new MemoryStream())

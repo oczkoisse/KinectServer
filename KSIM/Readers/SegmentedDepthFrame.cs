@@ -18,15 +18,14 @@ namespace KSIM.Readers
             get { return underlyingClosestBodyFrame;  }
         }
 
-        private int segmentedWidth = 0, segmentedHeight = 0;
         public int SegmentedWidth
         {
-            get { return segmentedWidth; }
+            get { return xEnd - xStart; }
         }
 
         public int SegmentedHeight
         {
-            get { return segmentedHeight; }
+            get { return yEnd - yStart; }
         }
 
         public SegmentedDepthFrame(Microsoft.Kinect.DepthFrame df, ClosestBodyFrame cbf) : base(df)
@@ -35,13 +34,7 @@ namespace KSIM.Readers
 
             SetCenter();
 
-            bool segmented = Segment();
-
-            if (segmented)
-            {
-                segmentedWidth = xEnd - xStart;
-                segmentedHeight = yEnd - yStart;
-            }
+            Segment();
         }
 
         protected abstract void SetCenter();
@@ -81,7 +74,7 @@ namespace KSIM.Readers
 
             if (isDepthInvalid)
             {
-                // The boundaries below rely on the fact that
+                // The boundaries below use the fact that
                 // if depth is invalid (0), then the depth frame is
                 // all fallbackValue valued with size fallbackSize x fallbackSize
                 xStart = 0;
