@@ -19,9 +19,9 @@ namespace KSIM.Readers
             var originalFrame = f.DepthFrameReference.AcquireFrame();
             
             if (originalFrame == null)
-                throw new NullReferenceException("Can't retrieve Depth frame");
-
-            return new DepthFrame(originalFrame);
+                return null;
+            else
+                return new DepthFrame(originalFrame);
         }
     }
 

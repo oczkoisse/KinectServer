@@ -17,12 +17,13 @@ namespace KSIM.Readers
             var originalBodyFrame = f.BodyFrameReference.AcquireFrame();
 
             if (originalBodyFrame == null || originalDepthFrame == null)
-                throw new NullReferenceException("Null frame returned by Kinect");
-
-            var cbr = new ClosestBodyReader();
-
-            ClosestBodyFrame cbf = (ClosestBodyFrame)cbr.read(f);
-            return new LHDepthFrame(originalDepthFrame, cbf);
+                return null;
+            else
+            {
+                var cbr = new ClosestBodyReader();
+                ClosestBodyFrame cbf = (ClosestBodyFrame)cbr.read(f);
+                return new LHDepthFrame(originalDepthFrame, cbf);
+            }
         }
     }
 

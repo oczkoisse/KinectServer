@@ -51,10 +51,12 @@ namespace KSIM
                 lock (connectedClients)
                 {
                     connectedClients.Add(c, activeFrames);
+                    Trace.WriteLine(String.Format("Accepted connection from {0}", c.Client.RemoteEndPoint.ToString()));
                 }
             }
             else
             {
+                Trace.WriteLine(String.Format("Rejecting client {0} because of an unrecognized stream type", c.Client.RemoteEndPoint.ToString()));
                 c.Close();
             }
         }
@@ -84,8 +86,7 @@ namespace KSIM
             }
             catch (Exception e)
             {
-                Console.WriteLine("Problem in accepting a TCP connection request:");
-                Console.WriteLine(e.Message);
+                Trace.WriteLine(String.Format("Problem in accepting a TCP connection request: {0}", e.Message));
             }
         }
 
@@ -99,57 +100,66 @@ namespace KSIM
 
         private void Reader_MultiSourceFrameArrived(object sender, MultiSourceFrameArrivedEventArgs e)
         {
-            Dictionary<Readers.FrameType, byte[]> cachedFrames = new Dictionary<Readers.FrameType, byte[]>();
-
-            //Console.WriteLine("Getting frame...");
             MultiSourceFrame msf = e.FrameReference.AcquireFrame();
-            //Console.WriteLine("Got the frame");
+            
             long curTimestamp = DateTime.Now.Ticks;
 
-            List<Readers.Frame> framesToBeDisposed = new List<Readers.Frame>();
+            Dictionary<Readers.FrameType, Readers.Frame> cachedFrames = new Dictionary<Readers.FrameType, Readers.Frame>();
             List<TcpClient> clientsToBeDisconnected = new List<TcpClient>();
 
             // Will lock new connections until all previous clients are sent data
-            //Console.WriteLine("Trying to get a lock on connected clients list");
             lock (connectedClients)
             {
-                //Console.WriteLine("Got the lock");
+                // Cache all frames
                 foreach (var client in connectedClients.Keys)
                 {
                     foreach (var frameType in connectedClients[client])
                     {
                         if (!cachedFrames.ContainsKey(frameType))
                         {
-                            using (var ms = new MemoryStream())
+                            KSIM.Readers.Frame frame = frameType.GetReader().read(msf);
+                            if (frame != null)
                             {
-                                KSIM.Readers.Frame frame = frameType.GetReader().read(msf);
-                                // TO DO: To ensure synchronization, ensure that either send all frames or none if any of the subscribed frames is null
-                                if (frame != null)
-                                {
-                                    frame.Timestamp = curTimestamp;
-                                    frame.Serialize(ms);
-                                    cachedFrames[frameType] = ms.ToArray();
-                                    try
-                                    {
-                                        client.GetStream().Write(cachedFrames[frameType], 0, cachedFrames[frameType].Length);
-                                    }
-                                    catch(IOException ex)
-                                    {
-                                        Console.WriteLine("Client {0} disconnected", client.Client.RemoteEndPoint.ToString());
-                                        clientsToBeDisconnected.Add(client);
-                                        // No need to send other frames subscribed by the client since it is already disconnected
-                                        break;
-                                    }
-                                    framesToBeDisposed.Add(frame);
-                                }
+                                frame.Timestamp = curTimestamp;
+                                cachedFrames[frameType] = frame;
+                            }
+                            else
+                            {
+                                // To ensure synchronization, do not send any frame if one of the potentially subscribed ones is unavailable (null)
+                                return;
                             }
                         }
                     }
                 }
+
+                // We are ensured that all the subscribed frames have already been cached
+                foreach (var client in connectedClients.Keys)
+                {
+                    foreach(var frameType in connectedClients[client])
+                    {
+                        using (var ms = new MemoryStream())
+                        {
+                            cachedFrames[frameType].Serialize(ms);
+                            byte[] dataToSend = ms.ToArray();
+                            try
+                            {
+                                client.GetStream().Write(dataToSend, 0, dataToSend.Length);
+                            }
+                            catch (IOException)
+                            {
+                                Trace.WriteLine(String.Format("Client {0} disconnected", client.Client.RemoteEndPoint.ToString()));
+                                clientsToBeDisconnected.Add(client);
+                                // No need to send other frames subscribed by the client since it is already disconnected
+                                break;
+                            }
+                        }
+                    }
+                }
+                
             }
             
             // Dispose frames quickly otherwise Kinect will hang
-            foreach (var frame in framesToBeDisposed)
+            foreach (var frame in cachedFrames.Values)
                 frame.Dispose();
 
             // Remove clients that are already disconnected

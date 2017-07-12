@@ -49,6 +49,9 @@ namespace KSIM.Readers
 
         private bool isDepthInvalid = false;
         private int fallbackSize = 168;
+        // Because the training net requires a value between 0 and 255
+        // One could make it the maximum possible for a depth frame that could be normalized by the client
+        // or alternatively, output the normalized one beforehand as is done here.
         private ushort fallbackValue = 255;
 
         private const int CubeSize = 396,

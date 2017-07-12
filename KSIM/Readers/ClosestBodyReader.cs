@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Kinect;
 using System.IO;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 
 namespace KSIM.Readers
 {
@@ -18,7 +19,6 @@ namespace KSIM.Readers
             var originalFrame = f.BodyFrameReference.AcquireFrame();
 
             if (originalFrame == null)
-                //throw new NullReferenceException("Can't retrieve Closest Body frame");
                 return null;
             else
                 return new ClosestBodyFrame(originalFrame);
@@ -124,7 +124,7 @@ namespace KSIM.Readers
                     trackedCount++;
                 }
             }
-            //Console.WriteLine("Number of tracked bodies: {0}", trackedCount);
+            Debug.WriteLine("Number of tracked bodies: {0}", trackedCount);
         }
 
         public override void Serialize(Stream s)
