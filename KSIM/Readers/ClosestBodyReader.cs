@@ -157,7 +157,7 @@ namespace KSIM.Readers
                 writer.Write(0);
 
                 writer.Write(Timestamp);
-                writer.Write((int)Type);
+                writer.Write(1 << (int)Type);
 
                 writer.Write(TrackedCount);
 

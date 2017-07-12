@@ -88,7 +88,7 @@ namespace KSIM.Readers
             {
                 int loadSize = 0;
                 writer.Write(loadSize);
-                writer.Write((int)Type);
+                writer.Write(1 << (int)Type);
                 writer.Write(Timestamp);
                 writer.Write(Width);
                 writer.Write(Height);
