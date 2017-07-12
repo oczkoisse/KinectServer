@@ -16,11 +16,12 @@ namespace KSIM.Readers
             // Note that we do not dispose the acquired frame
             // that responsibility is delegated to newly created frame
             var originalFrame = f.BodyFrameReference.AcquireFrame();
-            
-            if (originalFrame == null)
-                throw new NullReferenceException("Can't retrieve Closest Body frame");
 
-            return new ClosestBodyFrame(originalFrame);
+            if (originalFrame == null)
+                //throw new NullReferenceException("Can't retrieve Closest Body frame");
+                return null;
+            else
+                return new ClosestBodyFrame(originalFrame);
         }
     }
 

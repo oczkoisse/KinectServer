@@ -15,7 +15,36 @@ namespace KSIM.Readers
 
     // All frame types start internally from 1
     // i.e. if a client sends all zeros that is invalid frame type
+    // The corresponding bit pattern that client should send for requesting a stream is computed as 2**frame_type
     public enum FrameType { Color=1, Skeleton, Audio, Depth, ClosestBody, LHDepth, RHDepth, HeadDepth };
+
+    public static class FrameTypeExtensions
+    {
+        private static ClosestBodyReader cbr = new ClosestBodyReader();
+        private static DepthReader dr = new DepthReader();
+        private static LHDepthReader lhd = new LHDepthReader();
+        private static RHDepthReader rhd = new RHDepthReader();
+        private static HeadDepthReader hdr = new HeadDepthReader();
+
+        public static Reader GetReader(this FrameType ft)
+        {
+            switch(ft)
+            {
+                case FrameType.ClosestBody:
+                    return cbr;
+                case FrameType.Depth:
+                    return dr;
+                case FrameType.LHDepth:
+                    return lhd;
+                case FrameType.RHDepth:
+                    return rhd;
+                case FrameType.HeadDepth:
+                    return hdr;
+                default:
+                    throw new NotImplementedException("Non-implemented reader requested");
+            }
+        }
+    }
 
     public abstract class Frame : IDisposable
     {

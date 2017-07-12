@@ -79,7 +79,7 @@ namespace KSIM.Readers
             if (isDepthInvalid)
             {
                 // The boundaries below rely on the fact that
-                // is depth is invalid (0), then the depth frame is
+                // if depth is invalid (0), then the depth frame is
                 // all fallbackValue valued with size fallbackSize x fallbackSize
                 xStart = 0;
                 xEnd = fallbackSize;
@@ -190,27 +190,26 @@ namespace KSIM.Readers
                 int xStartInFrame = xStart >= 0 ? xStart : 0,
                 xEndInFrame = xEnd <= Width ? xEnd : Width;
 
-                const ushort zero = 0;
-
+                
                 //Write prepended zero rows of width xEnd - xStart
                 for (int i = 0; i < prepend_rows; i++)
                     for (int j = 0; j < SegmentedWidth; j++)
-                        writer.Write(zero);
+                        writer.Write(0);
 
                 for (int i = 0; i < yEnd - yStart; i++)
                 {
                     for (int j = 0; j < prepend_zeros; j++)
-                        writer.Write(zero);
+                        writer.Write(0);
                     for (int j = xStartInFrame; j < xEndInFrame; j++)
                         writer.Write(depthData[j]);
                     for (int j = 0; j < append_zeros; j++)
-                        writer.Write(zero);
+                        writer.Write(0);
                 }
 
                 //Write appended zero rows of width xEnd - xStart
                 for (int i = 0; i < append_rows; i++)
                     for (int j = 0; j < SegmentedWidth; j++)
-                        writer.Write(zero);
+                        writer.Write(0);
 
                 // Rewind back to write the load size in the first 4 bytes
                 loadSize = (int)writer.Seek(0, SeekOrigin.Current) - sizeof(int);

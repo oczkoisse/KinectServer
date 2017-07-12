@@ -106,6 +106,9 @@ namespace KSIM
             //Console.WriteLine("Got the frame");
             long curTimestamp = DateTime.Now.Ticks;
 
+            List<Readers.Frame> framesToBeDisposed = new List<Readers.Frame>();
+            List<TcpClient> clientsToBeDisconnected = new List<TcpClient>();
+
             // Will lock new connections until all previous clients are sent data
             //Console.WriteLine("Trying to get a lock on connected clients list");
             lock (connectedClients)
@@ -119,53 +122,41 @@ namespace KSIM
                         {
                             using (var ms = new MemoryStream())
                             {
-                                KSIM.Readers.Frame frame = null;
-                                switch (frameType)
-                                {
-                                    case FrameType.ClosestBody:
-                                        frame = new ClosestBodyReader().read(msf);
-                                        frame.Timestamp = curTimestamp;
-                                        frame.Serialize(ms);
-                                        cachedFrames[FrameType.ClosestBody] = ms.ToArray();
-                                        break;
-                                    case FrameType.Depth:
-                                        frame = new DepthReader().read(msf);
-                                        frame.Timestamp = curTimestamp;
-                                        frame.Serialize(ms);
-                                        cachedFrames[FrameType.Depth] = ms.ToArray();
-                                        break;
-                                    case FrameType.HeadDepth:
-                                        frame = new HeadDepthReader().read(msf);
-                                        frame.Timestamp = curTimestamp;
-                                        frame.Serialize(ms);
-                                        cachedFrames[FrameType.HeadDepth] = ms.ToArray();
-                                        break;
-                                    case FrameType.LHDepth:
-                                        frame = new LHDepthReader().read(msf);
-                                        frame.Timestamp = curTimestamp;
-                                        frame.Serialize(ms);
-                                        cachedFrames[FrameType.LHDepth] = ms.ToArray();
-                                        break;
-                                    case FrameType.RHDepth:
-                                        frame = new RHDepthReader().read(msf);
-                                        frame.Timestamp = curTimestamp;
-                                        frame.Serialize(ms);
-                                        cachedFrames[FrameType.RHDepth] = ms.ToArray();
-                                        break;
-                                    default:
-                                        throw new NotImplementedException();
-                                }
-                                // Dispose frame immediately, otherwise Kinect will hang
+                                KSIM.Readers.Frame frame = frameType.GetReader().read(msf);
+                                // TO DO: To ensure synchronization, ensure that either send all frames or none if any of the subscribed frames is null
                                 if (frame != null)
-                                    frame.Dispose();
+                                {
+                                    frame.Timestamp = curTimestamp;
+                                    frame.Serialize(ms);
+                                    cachedFrames[frameType] = ms.ToArray();
+                                    try
+                                    {
+                                        client.GetStream().Write(cachedFrames[frameType], 0, cachedFrames[frameType].Length);
+                                    }
+                                    catch(IOException ex)
+                                    {
+                                        Console.WriteLine(ex.Message);
+                                        clientsToBeDisconnected.Add(client);
+                                        // No need to send other frames subscribed by the client since it is already disconnected
+                                        break;
+                                    }
+                                    framesToBeDisposed.Add(frame);
+                                }
                             }
                         }
-                        //Console.WriteLine("Begin Writing {0} bytes", cachedFrames[frameType].Length);
-                        client.GetStream().Write(cachedFrames[frameType], 0, cachedFrames[frameType].Length);
-                        //Console.WriteLine("End Writing");
-
                     }
                 }
+            }
+            
+            // Dispose frames quickly otherwise Kinect will hang
+            foreach (var frame in framesToBeDisposed)
+                frame.Dispose();
+
+            // Remove clients that are already disconnected
+            foreach (var client in clientsToBeDisconnected)
+            {
+                client.Close();
+                connectedClients.Remove(client);
             }
         }
 
