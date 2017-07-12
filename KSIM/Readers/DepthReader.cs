@@ -74,9 +74,10 @@ namespace KSIM.Readers
         public override void Serialize(Stream s)
         {
             // Format:
-            // Load Size (4 bytes, signed) | Timestamp (8 bytes, signed) | Width (4 bytes, signed) | Height (4 bytes, signed) | Depth Data (2 bytes * Width * Height, unsigned)
+            // Load Size (4 bytes, signed) | Timestamp (8 bytes, signed) | Frame Type (4 bytes, bitset) | Width (4 bytes, signed) | Height (4 bytes, signed) | Depth Data (2 bytes * Width * Height, unsigned)
             // Description:
             // Load Size: Number of bytes to be read further to read one DepthFrame
+            // Type: The type of the stream
             // Timestamp: For syncing frames at the client side
             // Width: Width of the frame
             // Height: Height of the frame
@@ -87,7 +88,7 @@ namespace KSIM.Readers
             {
                 int loadSize = 0;
                 writer.Write(loadSize);
-
+                writer.Write((int)Type);
                 writer.Write(Timestamp);
                 writer.Write(Width);
                 writer.Write(Height);

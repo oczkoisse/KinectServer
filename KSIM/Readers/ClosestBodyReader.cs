@@ -130,7 +130,7 @@ namespace KSIM.Readers
         public override void Serialize(Stream s)
         {
             // Format:
-            // Load Size (4 bytes, signed) | Timestamp (8 bytes, signed) | Tracked Body Count (1 byte, unsigned)
+            // Load Size (4 bytes, signed) | Timestamp (8 bytes, signed) | Frame Type (4 bytes, bitset) | Tracked Body Count (1 byte, unsigned)
             // Tracking ID (8 bytes, unsigned) | Hand Left Confidence (1 byte, unsigned) | Hand Left State (1 byte, unsigned)
             // Hand Right Confidence (1 byte, unsigned) | Hand Right State (1 byte, unsigned)
             // For each Joint, X, Y, Z, W, X, Y, Z (all floats)
@@ -157,6 +157,7 @@ namespace KSIM.Readers
                 writer.Write(0);
 
                 writer.Write(Timestamp);
+                writer.Write((int)Type);
 
                 writer.Write(TrackedCount);
 
