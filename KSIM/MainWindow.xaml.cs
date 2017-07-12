@@ -135,7 +135,7 @@ namespace KSIM
                                     }
                                     catch(IOException ex)
                                     {
-                                        Console.WriteLine(ex.Message);
+                                        Console.WriteLine("Client {0} disconnected", client.Client.RemoteEndPoint.ToString());
                                         clientsToBeDisconnected.Add(client);
                                         // No need to send other frames subscribed by the client since it is already disconnected
                                         break;
