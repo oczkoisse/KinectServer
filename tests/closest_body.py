@@ -78,7 +78,6 @@ def recv_skeleton_frame(sock):
     """
     To read each stream frame from the server
     """
-    print "Begin reading"
     (load_size,) = struct.unpack("<i", recv_all(sock, struct.calcsize("<i")))
     print load_size
     return recv_all(sock, load_size)
