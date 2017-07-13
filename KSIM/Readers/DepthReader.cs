@@ -112,7 +112,8 @@ namespace KSIM.Readers
                 {
                     // TODO: dispose managed state (managed objects).
                 }
-                underlyingDepthFrame.Dispose();
+                if (underlyingDepthFrame != null)
+                    underlyingDepthFrame.Dispose();
                 disposed = true;
             }
         }

@@ -14,14 +14,11 @@ namespace KSIM.Readers
             // Note that we do not dispose the acquired frame
             // that responsibility is delegated to newly created frame
             var originalDepthFrame = f.DepthFrameReference.AcquireFrame();
-            var originalBodyFrame = f.BodyFrameReference.AcquireFrame();
-
-            if (originalBodyFrame == null || originalDepthFrame == null)
+            ClosestBodyFrame cbf = (ClosestBodyFrame)FrameType.ClosestBody.GetReader().read(f);
+            if (cbf == null || originalDepthFrame == null)
                 return null;
             else
             {
-                var cbr = new ClosestBodyReader();
-                ClosestBodyFrame cbf = (ClosestBodyFrame)cbr.read(f);
                 return new LHDepthFrame(originalDepthFrame, cbf);
             }
         }

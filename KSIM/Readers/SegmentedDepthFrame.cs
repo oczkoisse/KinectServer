@@ -34,7 +34,10 @@ namespace KSIM.Readers
 
             SetCenter();
 
-            Segment();
+            // May want to throw an invalid state exception if cropping fails
+            Crop();
+
+            Threshold();
         }
 
         protected abstract void SetCenter();
@@ -61,7 +64,7 @@ namespace KSIM.Readers
 
         private ushort posZ = 0;
 
-        protected virtual bool Segment()
+        protected virtual bool Crop()
         {
             int index = IndexIntoDepthData(posX, posY);
             if (index < 0 || index >= depthData.Length)
@@ -116,7 +119,9 @@ namespace KSIM.Readers
             {
                 for (int i = start; i < end; i++)
                 {
-                    if (depthData[i] == 0)
+                    if (isDepthInvalid)
+                        depthData[i] = fallbackValue;
+                    else if (depthData[i] == 0)
                         depthData[i] = (ushort)zEnd;
                     else if (depthData[i] > zEnd)
                         depthData[i] = (ushort)zEnd;
@@ -223,7 +228,7 @@ namespace KSIM.Readers
                 {
                     // TODO: dispose managed state (managed objects).
                 }
-                base.Dispose();
+                base.Dispose(true);
                 underlyingClosestBodyFrame.Dispose();
                 disposed = true;
             }

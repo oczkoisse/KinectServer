@@ -125,7 +125,7 @@ namespace KSIM
                             }
                             else
                             {
-                                // To ensure synchronization, do not send any frame if one of the potentially subscribed ones is unavailable (null)
+                                // To ensure synchronization, do not send any frame if one of the subscribed ones is unavailable (null)
                                 return;
                             }
                         }
@@ -156,7 +156,6 @@ namespace KSIM
                         }
                     }
                 }
-                
             }
             
             // Dispose frames quickly otherwise Kinect will hang
