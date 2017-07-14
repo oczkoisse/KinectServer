@@ -25,6 +25,8 @@ namespace KSIM.Readers
 
         public sealed class ColorFrame : Frame
         {
+            private bool disposed = false;
+
             private byte[] colorData = null;
             private Bitmap bitmap = null;
             private IntPtr bitmapPtr = IntPtr.Zero;

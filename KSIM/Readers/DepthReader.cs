@@ -27,6 +27,8 @@ namespace KSIM.Readers
 
     public class DepthFrame : Frame
     {
+        private bool disposed = false;
+
         private Microsoft.Kinect.DepthFrame underlyingDepthFrame = null;
 
         protected Microsoft.Kinect.DepthFrame UnderlyingDepthFrame
@@ -46,12 +48,16 @@ namespace KSIM.Readers
 
         protected int IndexIntoDepthData(float x, float y)
         {
-            return (int)y * Width + (int)x;
+            return IndexIntoDepthData((int)x, (int)y);
         }
 
         protected int IndexIntoDepthData(int x, int y)
         {
-            return y * Width + x;
+            int index = y * Width + x;
+            if (index >= 0 && index < depthData.Length)
+                return index;
+            else
+                return -1;
         }
 
 
@@ -110,12 +116,12 @@ namespace KSIM.Readers
             {
                 if (disposing)
                 {
-                    // TODO: dispose managed state (managed objects).
+                    // dispose managed state (managed objects)
+                    if (underlyingDepthFrame != null)
+                        underlyingDepthFrame.Dispose();
                 }
-                if (underlyingDepthFrame != null)
-                    underlyingDepthFrame.Dispose();
-                disposed = true;
             }
+            disposed = true;
         }
     }
 }

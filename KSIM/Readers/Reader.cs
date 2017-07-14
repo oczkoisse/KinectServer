@@ -84,9 +84,7 @@ namespace KSIM.Readers
         // so write clients accordingly
         public abstract void Serialize(Stream stream);
         
-        // Disposable pattern starts
-        protected bool disposed = false; // To detect redundant calls
-
+        // Disposable pattern should always be implemented in base class
         protected abstract void Dispose(bool disposing);
 
         public void Dispose()

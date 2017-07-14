@@ -11,6 +11,8 @@ namespace KSIM.Readers
 {
     public abstract class SegmentedDepthFrame : KSIM.Readers.DepthFrame
     {
+        private bool disposed = false;
+
         private ClosestBodyFrame underlyingClosestBodyFrame = null;
 
         protected ClosestBodyFrame UnderlyingClosestBodyFrame
@@ -67,7 +69,7 @@ namespace KSIM.Readers
         protected virtual bool Crop()
         {
             int index = IndexIntoDepthData(posX, posY);
-            if (index < 0 || index >= depthData.Length)
+            if (index == -1)
                 return false;
 
             posZ = DepthData[index];
@@ -112,12 +114,12 @@ namespace KSIM.Readers
                 yStartInFrame = yStart >= 0 ? yStart : 0,
                 yEndInFrame = yEnd <= Height ? yEnd : Height;
 
-            for (int start = IndexIntoDepthData(xStartInFrame, yStartInFrame),
-                    end = IndexIntoDepthData(xEndInFrame, yStartInFrame);
-                    end <= depthData.Length;
-                    start += Width, end += Width)
+            for (int xStartInBuffer = IndexIntoDepthData(xStartInFrame, yStartInFrame),
+                    xEndInBuffer = IndexIntoDepthData(xEndInFrame, yStartInFrame);
+                    xEndInBuffer <= depthData.Length;
+                    xStartInBuffer += Width, xEndInBuffer += Width)
             {
-                for (int i = start; i < end; i++)
+                for (int i = xStartInBuffer; i < xEndInBuffer; i++)
                 {
                     if (isDepthInvalid)
                         depthData[i] = fallbackValue;
@@ -151,6 +153,8 @@ namespace KSIM.Readers
                 writer.Write(1 << (int)Type);
                 writer.Write(Timestamp);
 
+                Debug.Write(String.Format("{0} x {1}\n", SegmentedWidth, SegmentedHeight));
+                
                 writer.Write(SegmentedWidth);
                 writer.Write(SegmentedHeight);
 
@@ -183,35 +187,42 @@ namespace KSIM.Readers
 
                 if (yStart >= Height)
                     append_rows = yEnd - yStart;
-                else if (yEnd > Width)
+                else if (yEnd > Height)
                     append_rows = yEnd - Height;
                 else
                     append_rows = 0;
 
                 int xStartInFrame = xStart >= 0 ? xStart : 0,
-                xEndInFrame = xEnd <= Width ? xEnd : Width,
+                    xEndInFrame = xEnd <= Width ? xEnd : Width,
 
-                yStartInFrame = yStart >= 0 ? yStart : 0,
-                yEndInFrame = yEnd <= Height ? yEnd : Height;
+                    yStartInFrame = yStart >= 0 ? yStart : 0,
+                    yEndInFrame = yEnd <= Height ? yEnd : Height;
 
+
+                Debug.Write(String.Format("Virtual frame: ({0}, {1}) and ({2}, {3})\n", xStart, yStart, xEnd, yEnd));
+                
                 //Write prepended zero rows of width xEnd - xStart
                 for (int i = 0; i < prepend_rows; i++)
                     for (int j = 0; j < SegmentedWidth; j++)
                         writer.Write((ushort)0);
 
-                int start = IndexIntoDepthData(xStartInFrame, yStartInFrame),
-                    end = IndexIntoDepthData(xEndInFrame, yStartInFrame);
-                    
+                int xStartInBuffer = IndexIntoDepthData(xStartInFrame, yStartInFrame),
+                    xEndInBuffer = IndexIntoDepthData(xEndInFrame, yStartInFrame);
+
+                Debug.Assert(SegmentedHeight == (prepend_rows + (yEndInFrame - yStartInFrame) + append_rows), String.Format("Mismatch in segmented height: {0} = {1} + ({2} - {3}) + {4}\n", SegmentedHeight, prepend_rows, yEndInFrame, yStartInFrame, append_rows));
+
+                Debug.Assert(SegmentedWidth == (prepend_zeros + (xEndInBuffer - xStartInBuffer) + append_zeros), String.Format("Mismatch in segmented width: {0} = {1} + ({2} - {3}) + {4}\n", SegmentedWidth, prepend_zeros, xEndInBuffer, xStartInBuffer, append_zeros));
+
                 for (int i = 0; i < yEndInFrame - yStartInFrame; i++)
                 {
                     for (int j = 0; j < prepend_zeros; j++)
                         writer.Write((ushort)0);
                     
-                    for (int j = start; j < end; j++)
+                    for (int j = xStartInBuffer; j < xEndInBuffer; j++)
                         writer.Write(depthData[j]);
 
-                    start += Width;
-                    end += Width;
+                    xStartInBuffer += Width;
+                    xEndInBuffer += Width;
 
                     for (int j = 0; j < append_zeros; j++)
                         writer.Write((ushort)0);
@@ -221,7 +232,7 @@ namespace KSIM.Readers
                 for (int i = 0; i < append_rows; i++)
                     for (int j = 0; j < SegmentedWidth; j++)
                         writer.Write((ushort)0);
-
+                
                 // Rewind back to write the load size in the first 4 bytes
                 loadSize = (int)writer.Seek(0, SeekOrigin.Current) - sizeof(int);
                 writer.Seek(0, SeekOrigin.Begin);
@@ -237,11 +248,12 @@ namespace KSIM.Readers
                 if (disposing)
                 {
                     // TODO: dispose managed state (managed objects).
+                    if (underlyingClosestBodyFrame != null)
+                        underlyingClosestBodyFrame.Dispose();
                 }
-                base.Dispose(true);
-                underlyingClosestBodyFrame.Dispose();
-                disposed = true;
             }
+            disposed = true;
+            base.Dispose(disposing);
         }
     }
 }

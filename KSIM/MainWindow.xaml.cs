@@ -126,7 +126,8 @@ namespace KSIM
                             else
                             {
                                 // To ensure synchronization, do not send any frame if one of the subscribed ones is unavailable (null)
-                                return;
+                                // But we still need to dispose of the frames already cached
+                                goto DisposeFrames;
                             }
                         }
                     }
@@ -156,18 +157,19 @@ namespace KSIM
                         }
                     }
                 }
+
+                // Remove clients that are already disconnected
+                foreach (var client in clientsToBeDisconnected)
+                {
+                    client.Close();
+                    connectedClients.Remove(client);
+                }
             }
             
+            DisposeFrames:
             // Dispose frames quickly otherwise Kinect will hang
             foreach (var frame in cachedFrames.Values)
                 frame.Dispose();
-
-            // Remove clients that are already disconnected
-            foreach (var client in clientsToBeDisconnected)
-            {
-                client.Close();
-                connectedClients.Remove(client);
-            }
         }
 
 

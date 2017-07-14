@@ -14,13 +14,20 @@ namespace KSIM.Readers
             // Note that we do not dispose the acquired frame
             // that responsibility is delegated to newly created frame
             var originalDepthFrame = f.DepthFrameReference.AcquireFrame();
-            ClosestBodyFrame cbf = (ClosestBodyFrame)FrameType.ClosestBody.GetReader().read(f);
-            if (cbf == null || originalDepthFrame == null)
-                return null;
-            else
+            var cbf = (ClosestBodyFrame)FrameType.ClosestBody.GetReader().read(f);
+
+            if (cbf != null && originalDepthFrame != null)
             {
                 return new LHDepthFrame(originalDepthFrame, cbf);
             }
+            else
+            {
+                if (cbf != null)
+                    cbf.Dispose();
+                if (originalDepthFrame != null)
+                    originalDepthFrame.Dispose();
+            }
+            return null;
         }
     }
 
@@ -37,6 +44,14 @@ namespace KSIM.Readers
             DepthSpacePoint p = UnderlyingDepthFrame.DepthFrameSource.KinectSensor.CoordinateMapper.MapCameraPointToDepthSpace(pos);
             posX = p.X;
             posY = p.Y;
+        }
+
+        private bool disposed = false;
+
+        protected override void Dispose(bool disposing)
+        {
+            disposed = true;
+            base.Dispose(disposing);
         }
     }
 }

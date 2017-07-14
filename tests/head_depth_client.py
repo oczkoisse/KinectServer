@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 src_addr = '127.0.0.1'
 src_port = 8000
 
-stream_id = 64;
+stream_id = 256;
 
 def connect():
     """
@@ -93,7 +93,7 @@ if __name__ == '__main__':
         avg_frame_time += (t_end - t_begin)
         timestamp, frame_type, width, height, posx, posy, depth_data = decode_frame(f)
         print timestamp, width, height
-        do_plot = True
+        do_plot = False
         
         if do_plot and i % 20 == 0 and height*width > 0:
             image = np.array(depth_data).reshape((height, width))

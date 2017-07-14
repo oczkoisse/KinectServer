@@ -18,15 +18,23 @@ namespace KSIM.Readers
             // that responsibility is delegated to newly created frame
             var originalFrame = f.BodyFrameReference.AcquireFrame();
 
-            if (originalFrame == null)
-                return null;
-            else
-                return new ClosestBodyFrame(originalFrame);
+            if (originalFrame != null)
+            {
+                var cbf = new ClosestBodyFrame(originalFrame);
+                if (cbf.BodyFound)
+                    return cbf;
+                else
+                    cbf.Dispose();
+            }
+            
+            return null;
         }
     }
 
     public class ClosestBodyFrame : Frame
     {
+        private bool disposed = false; 
+
         private Body closestBody = null;
         protected BodyFrame underlyingBodyFrame = null;
 
@@ -119,7 +127,6 @@ namespace KSIM.Readers
                             closestBody = body;
                             closestNormSqr = normSqr;
                         }
-
                     }
                     trackedCount++;
                 }
@@ -206,11 +213,11 @@ namespace KSIM.Readers
                 if (disposing)
                 {
                     // TODO: dispose managed state (managed objects).
+                    if (underlyingBodyFrame != null)
+                        underlyingBodyFrame.Dispose();
                 }
-                if (underlyingBodyFrame != null)
-                    underlyingBodyFrame.Dispose();
-                disposed = true;
             }
+            disposed = true;
         }
 
     }
