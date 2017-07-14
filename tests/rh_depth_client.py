@@ -47,7 +47,6 @@ def decode_frame(raw_frame):
     header = struct.unpack(endianness + header_format, raw_frame[:header_size])
 
     timestamp, frame_type, width, height, posx, posy = header
-    print len(raw_frame), width, height
     
     depth_data_format = str(width * height) + "H"
     
@@ -92,7 +91,7 @@ if __name__ == '__main__':
         print "Time taken for this frame: {}".format(t_end - t_begin)
         avg_frame_time += (t_end - t_begin)
         timestamp, frame_type, width, height, posx, posy, depth_data = decode_frame(f)
-        print timestamp, width, height
+        print timestamp, frame_type, width, height
         do_plot = False
         
         if do_plot and i % 20 == 0 and height*width > 0:

@@ -42,6 +42,7 @@ def decode_frame(raw_frame):
     endianness = "<"
 
     # In each frame, a header is transmitted
+    # Timestamp | frame type | width | height
     header_format = "qiii"
     header_size = struct.calcsize(endianness + header_format)
     header = struct.unpack(endianness + header_format, raw_frame[:header_size])
@@ -93,7 +94,7 @@ if __name__ == '__main__':
         print "Time take for this frame: {}".format(t_end - t_begin)
         avg_frame_time += (t_end - t_begin)
         timestamp, frame_type, width, height, depth_data = decode_frame(f)
-        print timestamp, width, height
+        print timestamp, frame_type, width, height
         do_plot = False
         
         if do_plot and i % 20 == 0:

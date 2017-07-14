@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 src_addr = '127.0.0.1'
 src_port = 8000
 
-stream_id = 256;
+stream_id = 64 | 128;
 
 def connect():
     """
@@ -91,10 +91,10 @@ if __name__ == '__main__':
         print "Time taken for this frame: {}".format(t_end - t_begin)
         avg_frame_time += (t_end - t_begin)
         timestamp, frame_type, width, height, posx, posy, depth_data = decode_frame(f)
-        print timestamp, frame_type, width, height
+        print timestamp, frame_type, width, height, "LH" if frame_type == 64 else "RH", frame_type
         do_plot = False
         
-        if do_plot and i % 20 == 0 and height*width > 0:
+        if do_plot and height*width > 0 and (i%20 < 2):
             image = np.array(depth_data).reshape((height, width))
             im = plt.imshow(image, cmap='gray')
             plt.show()

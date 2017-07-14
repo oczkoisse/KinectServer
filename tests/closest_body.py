@@ -39,7 +39,7 @@ def decode_frame(raw_frame):
     # Expect little endian byte order
     endianness = "<"
 
-    # [ commonTimestamp | Tracked body count
+    # [ commonTimestamp | frame type | Tracked body count
     header_format = "qiB"
 
     timestamp, frame_type, tracked_body_count = struct.unpack(endianness + header_format, raw_frame[:struct.calcsize(header_format)])
@@ -79,7 +79,7 @@ def recv_skeleton_frame(sock):
     To read each stream frame from the server
     """
     (load_size,) = struct.unpack("<i", recv_all(sock, struct.calcsize("<i")))
-    print load_size
+    #print load_size
     return recv_all(sock, load_size)
     
 if __name__ == '__main__':
@@ -87,9 +87,10 @@ if __name__ == '__main__':
     while True:
         try:
             f = recv_skeleton_frame(s)
-            timestamp, _, tracked_body_count = decode_frame(f)[:3]
-            print timestamp, tracked_body_count
+            timestamp, frame_type, tracked_body_count = decode_frame(f)[:3]
+            print timestamp, frame_type, tracked_body_count
         except:
             s.close()
             break
+        print "\n\n"
         

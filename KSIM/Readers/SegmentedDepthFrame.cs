@@ -150,8 +150,8 @@ namespace KSIM.Readers
             {
                 int loadSize = 0;
                 writer.Write(loadSize);
-                writer.Write(1 << (int)Type);
                 writer.Write(Timestamp);
+                writer.Write(1 << (int)Type);
 
                 Debug.Write(String.Format("{0} x {1}\n", SegmentedWidth, SegmentedHeight));
                 

@@ -32,7 +32,7 @@ namespace KSIM
         private TcpListener server = new TcpListener(IPAddress.Any, PORT);
 
         private Dictionary<TcpClient, List<Readers.FrameType>> connectedClients = new Dictionary<TcpClient, List<Readers.FrameType>>();
-
+        
         private void HandleNewClient(IAsyncResult res)
         {
             TcpClient c = server.EndAcceptTcpClient(res);
@@ -52,6 +52,8 @@ namespace KSIM
                 {
                     connectedClients.Add(c, activeFrames);
                     Trace.WriteLine(String.Format("Accepted connection from {0}", c.Client.RemoteEndPoint.ToString()));
+                    foreach (var ft in activeFrames)
+                        Trace.WriteLine((int)ft);
                 }
             }
             else
