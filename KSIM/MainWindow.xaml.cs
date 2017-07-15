@@ -30,6 +30,7 @@ namespace KSIM
         private const int PORT = 8000;
 
         private TcpListener server = new TcpListener(IPAddress.Any, PORT);
+        private KinectSensor sensor = null;
 
         private Dictionary<TcpClient, List<Readers.FrameType>> connectedClients = new Dictionary<TcpClient, List<Readers.FrameType>>();
         
@@ -94,10 +95,13 @@ namespace KSIM
 
         public MainWindow()
         {
-            server.Start();
-            InitializeKinect();
-            ContinueAcceptConnections();
-            InitializeComponent();
+            this.sensor = InitializeKinect();
+            if (sensor != null)
+            {
+                server.Start();
+                ContinueAcceptConnections();
+                InitializeComponent();
+            }
         }
 
         private void Reader_MultiSourceFrameArrived(object sender, MultiSourceFrameArrivedEventArgs e)
@@ -175,12 +179,16 @@ namespace KSIM
         }
 
 
-        private void InitializeKinect()
+        private KinectSensor InitializeKinect()
         {
             var sensor = KinectSensor.GetDefault();
-            var msfr = sensor.OpenMultiSourceFrameReader(FrameSourceTypes.Depth | FrameSourceTypes.Color | FrameSourceTypes.Body);
-            msfr.MultiSourceFrameArrived += Reader_MultiSourceFrameArrived;
-            sensor.Open();
+            if (sensor != null)
+            {
+                var msfr = sensor.OpenMultiSourceFrameReader(FrameSourceTypes.Depth | FrameSourceTypes.Color | FrameSourceTypes.Body);
+                msfr.MultiSourceFrameArrived += Reader_MultiSourceFrameArrived;
+                sensor.Open();
+            }
+            return sensor;
         }
 
         private void ResetServer()
