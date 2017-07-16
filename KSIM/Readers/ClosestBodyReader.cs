@@ -131,7 +131,7 @@ namespace KSIM.Readers
                     trackedCount++;
                 }
             }
-            Debug.WriteLine("Number of tracked bodies: {0}", trackedCount);
+            //Debug.WriteLine("Number of tracked bodies: {0}", trackedCount);
         }
 
         public override void Serialize(Stream s)

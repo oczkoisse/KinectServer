@@ -43,9 +43,22 @@ namespace KSIM
 
         private void HandleNewClient(IAsyncResult res)
         {
-            TcpClient c = server.EndAcceptTcpClient(res);
+            TcpClient c = null;
+            try
+            {
+                c = server.EndAcceptTcpClient(res);
+            }
+            catch(ObjectDisposedException e)
+            {
+                
+            }
+
             // Go back to accepting connections
             ContinueAcceptConnections();
+
+            if (c == null)
+                return;
+
             // Meanwhile read first four bytes of this client
             // 31 bits for receiving frame type or a combination thereof
             byte[] requestedFrames = new byte[] { 0x0, 0x0, 0x0, 0x0 };
@@ -114,7 +127,7 @@ namespace KSIM
 
         public MainWindow()
         {
-            this.lastTimestamp = 0;
+            Interlocked.Exchange(ref lastTimestamp, Int64.MinValue);
             bool success = InitializeKinect();
             if (success)
             {
@@ -127,12 +140,11 @@ namespace KSIM
         private void Reader_MultiSourceFrameArrived(object sender, MultiSourceFrameArrivedEventArgs e)
         {
             MultiSourceFrame msf = e.FrameReference.AcquireFrame();
-            
+
+            long prevTimestamp = Interlocked.Read(ref lastTimestamp);
             long curTimestamp = DateTime.Now.Ticks;
 
-            // Safely update last known timestamp
-            Interlocked.Exchange(ref lastTimestamp, curTimestamp);
-
+            
             Dictionary<Readers.FrameType, Readers.Frame> cachedFrames = new Dictionary<Readers.FrameType, Readers.Frame>();
             List<TcpClient> clientsToBeDisconnected = new List<TcpClient>();
 
@@ -162,6 +174,12 @@ namespace KSIM
                     }
                 }
 
+                // Safely update last known timestamp
+                // Optimistically update lastTimestamp to be ready to be written to clients
+                if(connectedClients.Count > 0)
+                    Interlocked.Exchange(ref lastTimestamp, curTimestamp);
+
+
                 // We are ensured that all the subscribed frames have already been cached
                 foreach (var client in connectedClients.Keys)
                 {
@@ -186,6 +204,11 @@ namespace KSIM
                         }
                     }
                 }
+
+                // If it turns out that all connected clients have in fact disconnected
+                // then revert back to previous timestamp
+                if (clientsToBeDisconnected.Count == connectedClients.Count)
+                    Interlocked.Exchange(ref lastTimestamp, prevTimestamp);
 
                 // Remove clients that are already disconnected
                 foreach (var client in clientsToBeDisconnected)
@@ -289,6 +312,27 @@ namespace KSIM
             server.Stop();
             server = new TcpListener(IPAddress.Any, PORT);
             server.Start();
+        }
+
+        private void Window_Closed(object sender, EventArgs e)
+        {
+            lock (connectedClients)
+            {
+                foreach (var client in connectedClients.Keys)
+                    client.Close();
+            }
+            lock(connectedAudioClients)
+            {
+                foreach (var client in connectedAudioClients)
+                    client.Close();
+            }
+            // Stop listening too
+            server.Stop();
+
+            // Release Kinect resources
+            multiSourceFrameReader.Dispose();
+            audioFrameReader.Dispose();
+            sensor.Close();
         }
     }
 }

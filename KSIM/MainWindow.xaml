@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:KSIM"
         mc:Ignorable="d"
-        Title="KSIM" Height="241.737" Width="403.39">
+        Title="KSIM" Height="241.737" Width="403.39" Closed="Window_Closed">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="375*"/>
