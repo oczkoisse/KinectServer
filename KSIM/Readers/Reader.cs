@@ -10,7 +10,12 @@ namespace KSIM.Readers
 {
     public abstract class Reader
     {
-        public abstract Frame read(MultiSourceFrame f);
+        public abstract Frame Read(MultiSourceFrame f);
+
+        public virtual Frame Read(AudioBeamFrameList lf)
+        {
+            throw new NotImplementedException("This Reader cannot read from a AudioBeamFrameList. Pass MultiSourceFrame instead.");
+        }
     }
 
     // All frame types start internally from 1
@@ -25,6 +30,7 @@ namespace KSIM.Readers
         private static LHDepthReader lhd = new LHDepthReader();
         private static RHDepthReader rhd = new RHDepthReader();
         private static HeadDepthReader hdr = new HeadDepthReader();
+        private static AudioReader ar = new AudioReader();
 
         public static Reader GetReader(this FrameType ft)
         {
@@ -40,6 +46,8 @@ namespace KSIM.Readers
                     return rhd;
                 case FrameType.HeadDepth:
                     return hdr;
+                case FrameType.Audio:
+                    return ar;
                 default:
                     throw new NotImplementedException("Non-implemented reader requested");
             }

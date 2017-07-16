@@ -60,6 +60,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Readers\AudioReader.cs" />
     <Compile Include="Readers\ClosestBodyReader.cs" />
     <Compile Include="Readers\ColorReader.cs" />
     <Compile Include="Readers\DepthReader.cs" />

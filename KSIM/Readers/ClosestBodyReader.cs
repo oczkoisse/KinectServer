@@ -12,7 +12,7 @@ namespace KSIM.Readers
 {
     public sealed class ClosestBodyReader : Reader
     {
-        public override Frame read(MultiSourceFrame f)
+        public override Frame Read(MultiSourceFrame f)
         {
             // Note that we do not dispose the acquired frame
             // that responsibility is delegated to newly created frame
@@ -160,8 +160,9 @@ namespace KSIM.Readers
             // Note that BinaryWriter is documented to write data in little-endian form only
             using (BinaryWriter writer = new BinaryWriter(s))
             {
+                int loadSize = 0;
                 // Placeholder for load size to be filled in later
-                writer.Write(0);
+                writer.Write(loadSize);
 
                 writer.Write(Timestamp);
                 writer.Write(1 << (int)Type);
@@ -199,9 +200,9 @@ namespace KSIM.Readers
                 }
 
                 // Rewind back to write the load size in the first 4 bytes
-                long loadSize = writer.Seek(0, SeekOrigin.Current);
+                loadSize = (int)writer.Seek(0, SeekOrigin.Current) - sizeof(int);
                 writer.Seek(0, SeekOrigin.Begin);
-                writer.Write((int)(loadSize - sizeof(int)));
+                writer.Write(loadSize);
                 writer.Seek(0, SeekOrigin.End);
             }
         }

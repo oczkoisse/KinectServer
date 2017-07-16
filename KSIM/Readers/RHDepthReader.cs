@@ -9,12 +9,12 @@ namespace KSIM.Readers
 {
     public sealed class RHDepthReader : DepthReader
     {
-        public override Frame read(MultiSourceFrame f)
+        public override Frame Read(MultiSourceFrame f)
         {
             // Note that we do not dispose the acquired frame
             // that responsibility is delegated to newly created frame
             var originalDepthFrame = f.DepthFrameReference.AcquireFrame();
-            var cbf = (ClosestBodyFrame)FrameType.ClosestBody.GetReader().read(f);
+            var cbf = (ClosestBodyFrame)FrameType.ClosestBody.GetReader().Read(f);
 
             if (cbf != null && originalDepthFrame != null)
             {

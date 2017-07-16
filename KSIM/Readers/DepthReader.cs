@@ -12,7 +12,7 @@ namespace KSIM.Readers
 {
     public class DepthReader : Reader
     {
-        public override Frame read(MultiSourceFrame f)
+        public override Frame Read(MultiSourceFrame f)
         {
             // Note that we do not dispose the acquired frame
             // that responsibility is delegated to newly created frame

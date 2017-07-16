@@ -19,6 +19,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Threading;
 
 namespace KSIM
 {
@@ -30,10 +31,16 @@ namespace KSIM
         private const int PORT = 8000;
 
         private TcpListener server = new TcpListener(IPAddress.Any, PORT);
-        private KinectSensor sensor = null;
-
         private Dictionary<TcpClient, List<Readers.FrameType>> connectedClients = new Dictionary<TcpClient, List<Readers.FrameType>>();
-        
+        private List<TcpClient> connectedAudioClients = new List<TcpClient>();
+
+        private KinectSensor sensor = null;
+        private MultiSourceFrameReader multiSourceFrameReader = null;
+        private AudioBeamFrameReader audioFrameReader = null;
+
+        // To keep sync between MultiSouceFrame and AudioBeamFrame
+        private long lastTimestamp;
+
         private void HandleNewClient(IAsyncResult res)
         {
             TcpClient c = server.EndAcceptTcpClient(res);
@@ -47,14 +54,26 @@ namespace KSIM
 
             List<Readers.FrameType> activeFrames = GetActiveFrames(requestedFrames);
 
-            if (activeFrames.Count != 0)
+            if (activeFrames.Count >= 1)
             {
-                lock (connectedClients)
+                if (activeFrames.Count == 1 && activeFrames[0] == FrameType.Audio)
                 {
-                    connectedClients.Add(c, activeFrames);
-                    Trace.WriteLine(String.Format("Accepted connection from {0}", c.Client.RemoteEndPoint.ToString()));
-                    foreach (var ft in activeFrames)
-                        Trace.WriteLine((int)ft);
+                    lock(connectedAudioClients)
+                    {
+                        connectedAudioClients.Add(c);
+                        Trace.WriteLine(String.Format("Accepted connection from {0}", c.Client.RemoteEndPoint.ToString()));
+                        Trace.WriteLine((int)activeFrames[0]);
+                    }
+                }
+                else if (!activeFrames.Contains(FrameType.Audio))
+                {
+                    lock (connectedClients)
+                    {
+                        connectedClients.Add(c, activeFrames);
+                        Trace.WriteLine(String.Format("Accepted connection from {0}", c.Client.RemoteEndPoint.ToString()));
+                        foreach (var ft in activeFrames)
+                            Trace.WriteLine((int)ft);
+                    }
                 }
             }
             else
@@ -95,8 +114,9 @@ namespace KSIM
 
         public MainWindow()
         {
-            this.sensor = InitializeKinect();
-            if (sensor != null)
+            this.lastTimestamp = 0;
+            bool success = InitializeKinect();
+            if (success)
             {
                 server.Start();
                 ContinueAcceptConnections();
@@ -109,6 +129,9 @@ namespace KSIM
             MultiSourceFrame msf = e.FrameReference.AcquireFrame();
             
             long curTimestamp = DateTime.Now.Ticks;
+
+            // Safely update last known timestamp
+            Interlocked.Exchange(ref lastTimestamp, curTimestamp);
 
             Dictionary<Readers.FrameType, Readers.Frame> cachedFrames = new Dictionary<Readers.FrameType, Readers.Frame>();
             List<TcpClient> clientsToBeDisconnected = new List<TcpClient>();
@@ -123,7 +146,7 @@ namespace KSIM
                     {
                         if (!cachedFrames.ContainsKey(frameType))
                         {
-                            KSIM.Readers.Frame frame = frameType.GetReader().read(msf);
+                            KSIM.Readers.Frame frame = frameType.GetReader().Read(msf);
                             if (frame != null)
                             {
                                 frame.Timestamp = curTimestamp;
@@ -178,19 +201,89 @@ namespace KSIM
                 frame.Dispose();
         }
 
+        private void Reader_AudioFrameArrived(object sender, AudioBeamFrameArrivedEventArgs e)
+        {
+            var audioBeamList = e.FrameReference.AcquireBeamFrames();
 
-        private KinectSensor InitializeKinect()
+            var f = (AudioFrame)KSIM.Readers.FrameType.Audio.GetReader().Read(audioBeamList);
+            if (f == null)
+                return;
+
+            f.Timestamp = Interlocked.Read(ref lastTimestamp);
+            
+            List<TcpClient> clientsToBeDisconnected = new List<TcpClient>();
+
+            using (var ms = new MemoryStream())
+            {
+                f.Serialize(ms);
+                // Dispose quickly else Kinect will hang
+                f.Dispose();
+                byte[] dataToSend = ms.ToArray();
+                lock(connectedAudioClients)
+                {
+                    foreach(var client in connectedAudioClients)
+                    {
+                        try
+                        {
+                            client.GetStream().Write(dataToSend, 0, dataToSend.Length);
+                        }
+                        catch (IOException)
+                        {
+                            Trace.WriteLine(String.Format("Client {0} disconnected", client.Client.RemoteEndPoint.ToString()));
+                            clientsToBeDisconnected.Add(client);
+                            // No need to send other frames subscribed by the client since it is already disconnected
+                            break;
+                        }
+                    }
+
+                    // Remove clients that are already disconnected
+                    foreach (var client in clientsToBeDisconnected)
+                    {
+                        client.Close();
+                        connectedAudioClients.Remove(client);
+                    }
+                }
+            }
+            
+        }
+
+
+        private bool InitializeKinect()
         {
             var sensor = KinectSensor.GetDefault();
             if (sensor != null)
             {
                 var msfr = sensor.OpenMultiSourceFrameReader(FrameSourceTypes.Depth | FrameSourceTypes.Color | FrameSourceTypes.Body);
                 msfr.MultiSourceFrameArrived += Reader_MultiSourceFrameArrived;
-                sensor.Open();
+
+                var beams = sensor.AudioSource.AudioBeams;
+                if (beams != null && beams.Count > 0)
+                {
+                    // Beam angle is in Radians theroretically between -1.58 to 1.58 (+- 90 degrees)
+                    // Practically, Kinect is limited to -0.87 to 0.87 (+- 90 degrees) with 5 degree increments
+                    // Note that setting beam mode and beam angle will only work if the
+                    // application window is in the foreground.
+                    // Furthermore, setting these values is an asynchronous operation --
+                    // it may take a short period of time for the beam to adjust.
+                    beams[0].AudioBeamMode = AudioBeamMode.Manual;
+                    beams[0].BeamAngle = 0.0f;
+
+                    var afr = sensor.AudioSource.OpenReader(); 
+                    afr.FrameArrived += Reader_AudioFrameArrived;
+
+                    sensor.Open();
+
+                    this.sensor = sensor;
+                    this.multiSourceFrameReader = msfr;
+                    this.audioFrameReader = afr;
+
+                    return true;
+                }
             }
-            return sensor;
+            return false;
         }
 
+        
         private void ResetServer()
         {
             server.Stop();
