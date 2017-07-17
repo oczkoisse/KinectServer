@@ -67,6 +67,7 @@ namespace KSIM.Readers
             this.beamFrameList = lf;
             this.subFrameCount = UnderlyingAudioFrame.SubFrames.Count;
 
+            Debug.Assert(this.subFrameCount != 0);
             // The following is always 1024 bytes
             byte[] subrameBuffer = new byte[UnderlyingAudioFrame.AudioSource.SubFrameLengthInBytes];
 

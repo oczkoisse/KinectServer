@@ -1,4 +1,3 @@
-import random
 import socket
 import struct
 import time
@@ -43,7 +42,7 @@ def decode_frame(raw_frame):
     header_format = "qii"
 
     timestamp, frame_type, sample_count = struct.unpack(endianness + header_format, raw_frame[:struct.calcsize(header_format)])
-
+    
     samples_format = str(sample_count) + "f" 
     # Unpack the raw frame into individual pieces of data as a tuple
     frame_pieces = struct.unpack(endianness + samples_format, raw_frame[struct.calcsize(header_format):])
@@ -84,8 +83,9 @@ if __name__ == '__main__':
             # PCM-16
             samples = [ int(sm * 32767) if -1.0 <= sm <= 1.0 else (sign(sm) * 32767 ) for sm in samples ]
             outwav.writeframes(struct.pack('<' + str(len(samples)) + 'h', *samples))
-            print timestamp, frame_type, sample_count, random.sample(samples, 5), max(samples)
-            if outwav.tell() > 160000:
+            print timestamp, frame_type, sample_count
+            
+            if outwav.tell() > 16000 * 5:
                 done = True
         except:
             done = True
