@@ -39,10 +39,10 @@ def decode_frame(raw_frame):
     # Expect little endian byte order
     endianness = "<"
 
-    # [ commonTimestamp | frame type | Tracked body count
-    header_format = "qiB"
+    # [ commonTimestamp | frame type | Tracked body count | Engaged
+    header_format = "qiBB"
 
-    timestamp, frame_type, tracked_body_count = struct.unpack(endianness + header_format, raw_frame[:struct.calcsize(header_format)])
+    timestamp, frame_type, tracked_body_count, engaged = struct.unpack(endianness + header_format, raw_frame[:struct.calcsize(header_format)])
 
     # For each body, a header is transmitted
     # TrackingId | HandLeftConfidence | HandLeftState | HandRightConfidence | HandRightState ]
@@ -54,10 +54,9 @@ def decode_frame(raw_frame):
 
     frame_format = body_format + (joint_format * 25)
 
-    tracked = tracked_body_count > 0
     
     # Unpack the raw frame into individual pieces of data as a tuple
-    frame_pieces = struct.unpack(endianness + (frame_format * (1 if tracked else 0)), raw_frame[struct.calcsize(header_format):])
+    frame_pieces = struct.unpack(endianness + (frame_format * (1 if engaged else 0)), raw_frame[struct.calcsize(header_format):])
     
     decoded = (timestamp, frame_type, tracked_body_count) + frame_pieces
 

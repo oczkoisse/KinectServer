@@ -21,7 +21,7 @@ namespace KSIM.Readers
             if (originalFrame != null)
             {
                 var cbf = new ClosestBodyFrame(originalFrame);
-                if (cbf.BodyFound)
+                if (cbf.Engaged)
                     return cbf;
                 else
                     cbf.Dispose();
@@ -34,7 +34,7 @@ namespace KSIM.Readers
     public class ClosestBodyFrame : Frame
     {
         private bool disposed = false; 
-
+        private readonly static double engageBound = 3.0;
         private Body closestBody = null;
         protected BodyFrame underlyingBodyFrame = null;
 
@@ -45,6 +45,16 @@ namespace KSIM.Readers
             get
             {
                 return trackedCount;
+            }
+        }
+
+        private double closestNormSqr = Double.MaxValue;
+
+        public bool Engaged
+        {
+            get
+            {
+                return closestNormSqr < engageBound;
             }
         }
 
@@ -110,24 +120,22 @@ namespace KSIM.Readers
 
             Body[] bodies = new Body[bf.BodyCount];
             bf.GetAndRefreshBodyData(bodies);
-            double closestNormSqr = Double.MaxValue;
+
             foreach (Body body in bodies)
             {
+                
                 if (body.IsTracked)
                 {
-                    if (closestBody == null)
-                        closestBody = body;
-                    else
-                    {
-                        var pos = body.Joints[JointType.SpineBase].Position;
-                        double normSqr = Math.Pow(pos.X, 2) + Math.Pow(pos.Y, 2) + Math.Pow(pos.Z, 2);
+                    var pos = body.Joints[JointType.SpineBase].Position;
+                    double normSqr = Math.Pow(pos.X, 2) + Math.Pow(pos.Y, 2) + Math.Pow(pos.Z, 2);
 
-                        if (normSqr < closestNormSqr)
-                        {
-                            closestBody = body;
-                            closestNormSqr = normSqr;
-                        }
+                    // The following is always true for first tracked body
+                    if (normSqr < closestNormSqr)
+                    {
+                        closestBody = body;
+                        closestNormSqr = normSqr;
                     }
+
                     trackedCount++;
                 }
             }
@@ -168,8 +176,9 @@ namespace KSIM.Readers
                 writer.Write(1 << (int)Type);
 
                 writer.Write(TrackedCount);
+                writer.Write(Engaged);
 
-                if (BodyFound)
+                if (Engaged)
                 {
                     writer.Write(TrackingId);
 
