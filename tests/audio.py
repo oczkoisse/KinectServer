@@ -6,7 +6,7 @@ from collections import deque
 
 import numpy as np
 
-src_addr = 'cwc1'
+src_addr = '127.0.0.1'
 src_port = 8000
 
 stream_id = 8;

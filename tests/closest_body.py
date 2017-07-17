@@ -1,7 +1,5 @@
-import gzip
 import socket
 import struct
-import time
 from collections import deque
 
 import numpy as np
