@@ -79,11 +79,12 @@ namespace KSIM.Readers
             // With 4 bytes per sample, that gives us 1024 bytes.
             // Note that Kinect Audio is mono sampled at 16kHz.
             // Beam angle may vary among subframes belonging to the same AudioBeamFrame
+            int j = 0;
             foreach (var sframe in UnderlyingAudioFrame.SubFrames)
             {
                 // May want to filter out subframes with low confidence for beam angle
                 sframe.CopyFrameDataToArray(subrameBuffer);
-                for (int i = 0, j = 0; i < subrameBuffer.Length; i += sizeof(float), j++)
+                for (int i = 0; i < subrameBuffer.Length; i += sizeof(float), j++)
                     audioBuffer[j] = BitConverter.ToSingle(subrameBuffer, i);
             }
         }
