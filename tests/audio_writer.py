@@ -74,7 +74,7 @@ if __name__ == '__main__':
     s = connect()
     sign = lambda x: 1 if x >= 0.0 else -1
     outwav = wave.open('file.wav', 'wb')
-    outwav.setparams((1, 2, 16000, 0, "NONE", ""))
+    outwav.setparams((1, 2, 16000, 0, "NONE", "NONE"))
     done = False
     while not done:
         try:
@@ -82,6 +82,7 @@ if __name__ == '__main__':
             timestamp, frame_type, sample_count, samples = decode_frame(f)
             # PCM-16
             samples = [ int(sm * 32767) if -1.0 <= sm <= 1.0 else (sign(sm) * 32767 ) for sm in samples ]
+            #samples = [ int(32767 * sm) for sm in samples ]
             outwav.writeframes(struct.pack('<' + str(len(samples)) + 'h', *samples))
             print timestamp, frame_type, sample_count
             
