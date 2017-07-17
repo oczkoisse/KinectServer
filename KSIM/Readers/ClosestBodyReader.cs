@@ -34,7 +34,7 @@ namespace KSIM.Readers
     public class ClosestBodyFrame : Frame
     {
         private bool disposed = false; 
-        private readonly static double engageBound = 3.0;
+        private readonly static double engageBound = 5.0;
         private Body closestBody = null;
         protected BodyFrame underlyingBodyFrame = null;
 
