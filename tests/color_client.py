@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 src_addr = '127.0.0.1'
 src_port = 8000
 
-stream_id = 16;
+stream_id = 2;
 
 def connect():
     """
@@ -43,17 +43,23 @@ def decode_frame(raw_frame):
 
     # In each frame, a header is transmitted
     # Timestamp | frame type | width | height
-    header_format = "qiii"
+    header_format = "qiiii"
     header_size = struct.calcsize(endianness + header_format)
     header = struct.unpack(endianness + header_format, raw_frame[:header_size])
 
-    timestamp, frame_type, width, height = header
+    timestamp, frame_type, stride, width, height = header
     
-    depth_data_format = str(width * height) + "H"
+    color_data_format = str(stride * height) + "B"
     
-    depth_data = struct.unpack_from(endianness + depth_data_format, raw_frame, header_size)
+    color_data = struct.unpack_from(endianness + color_data_format, raw_frame, header_size)
     
-    return (timestamp, frame_type, width, height, list(depth_data))
+    return (timestamp, frame_type, stride, width, height, list(color_data))
+
+def format_as_image(raw_image, width, height):
+    image_as_pixels = np.array([ raw_image[i:i+4] for i in range(0, len(raw_image), 4)] , dtype=np.float)
+    image_as_pixels /= 255.0
+    
+    return image_as_pixels.reshape((height, width, 4))
 
 def recv_all(sock, size):
     result = b''
@@ -64,7 +70,7 @@ def recv_all(sock, size):
         result += data
     return result
 
-def recv_depth_frame(sock):
+def recv_color_frame(sock):
     """
     Experimental function to read each stream frame from the server
     """
@@ -86,20 +92,22 @@ if __name__ == '__main__':
     while True:
         try:
             t_begin = time.time()
-            f = recv_depth_frame(s)
+            f = recv_color_frame(s)
             t_end = time.time()
         except:
             s.close()
             break
         print "Time taken for this frame: {}".format(t_end - t_begin)
         avg_frame_time += (t_end - t_begin)
-        timestamp, frame_type, width, height, depth_data = decode_frame(f)
-        print timestamp, frame_type, width, height
-        do_plot = False
+        timestamp, frame_type, stride, width, height, color_data = decode_frame(f)
+        print timestamp, frame_type, stride, width, height
+
+        do_plot = True
         
         if do_plot and i % 20 == 0:
-            image = np.array(depth_data).reshape((height, width))
-            im = plt.imshow(image, cmap='gray')
+            image = format_as_image(color_data, width, height)
+            print image[0,0]
+            im = plt.imshow(image)
             plt.show()
 
         print "\n\n"

@@ -31,6 +31,7 @@ namespace KSIM.Readers
         private static RHDepthReader rhd = new RHDepthReader();
         private static HeadDepthReader hdr = new HeadDepthReader();
         private static AudioReader ar = new AudioReader();
+        private static ColorReader cr = new ColorReader();
 
         public static Reader GetReader(this FrameType ft)
         {
@@ -48,6 +49,8 @@ namespace KSIM.Readers
                     return hdr;
                 case FrameType.Audio:
                     return ar;
+                case FrameType.Color:
+                    return cr;
                 default:
                     throw new NotImplementedException("Non-implemented reader requested");
             }

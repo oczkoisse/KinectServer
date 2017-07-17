@@ -306,14 +306,6 @@ namespace KSIM
             return false;
         }
 
-        
-        private void ResetServer()
-        {
-            server.Stop();
-            server = new TcpListener(IPAddress.Any, PORT);
-            server.Start();
-        }
-
         private void Window_Closed(object sender, EventArgs e)
         {
             lock (connectedClients)
@@ -330,9 +322,12 @@ namespace KSIM
             server.Stop();
 
             // Release Kinect resources
-            multiSourceFrameReader.Dispose();
-            audioFrameReader.Dispose();
-            sensor.Close();
+            if (multiSourceFrameReader != null)
+                multiSourceFrameReader.Dispose();
+            if (audioFrameReader != null)
+                audioFrameReader.Dispose();
+            if (sensor != null)
+                sensor.Close();
         }
     }
 }
