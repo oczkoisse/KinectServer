@@ -1,4 +1,4 @@
-import gzip
+import random
 import socket
 import struct
 import time
@@ -6,7 +6,7 @@ from collections import deque
 
 import numpy as np
 
-src_addr = '127.0.0.1'
+src_addr = 'cwc1'
 src_port = 8000
 
 stream_id = 8;
@@ -72,12 +72,14 @@ def recv_audio_frame(sock):
     
 if __name__ == '__main__':
     s = connect()
+    sign = lambda x: 1 if x >= 0.0 else -1 
     while True:
         try:
             f = recv_audio_frame(s)
             timestamp, frame_type, sample_count, samples = decode_frame(f)
-            print timestamp, frame_type, sample_count
-            print samples[:5]
+            # PCM-16
+            samples = [ int(sm * 32767) if -1.0 <= sm <= 1.0 else (sign(sm) * 32767 ) for sm in samples ]
+            print timestamp, frame_type, sample_count, random.sample(samples, 5), max(samples)
         except:
             s.close()
             break
