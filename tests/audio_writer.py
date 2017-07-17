@@ -86,8 +86,8 @@ if __name__ == '__main__':
             outwav.writeframes(struct.pack('<' + str(len(samples)) + 'h', *samples))
             print timestamp, frame_type, sample_count
             
-            if outwav.tell() > 16000 * 5:
-                done = True
+            #if outwav.tell() > 16000 * 5:
+            #    done = True
         except:
             done = True
         print "\n\n"
