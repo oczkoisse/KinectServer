@@ -50,14 +50,16 @@ namespace KSIM
             }
             catch(ObjectDisposedException e)
             {
-                
+                Debug.Write("Server closed while still listening.");
             }
-
-            // Go back to accepting connections
-            ContinueAcceptConnections();
-
+            
+            // Server has been stopped so don't listen anymore
             if (c == null)
                 return;
+
+            // Else go back to accepting connections
+            ContinueAcceptConnections();
+
 
             // Meanwhile read first four bytes of this client
             // 31 bits for receiving frame type or a combination thereof
@@ -323,9 +325,15 @@ namespace KSIM
 
             // Release Kinect resources
             if (multiSourceFrameReader != null)
+            {
+                multiSourceFrameReader.MultiSourceFrameArrived -= Reader_MultiSourceFrameArrived;
                 multiSourceFrameReader.Dispose();
+            }
             if (audioFrameReader != null)
+            {
+                audioFrameReader.FrameArrived -= Reader_AudioFrameArrived;
                 audioFrameReader.Dispose();
+            }
             if (sensor != null)
                 sensor.Close();
         }
