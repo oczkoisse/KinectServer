@@ -183,9 +183,9 @@ namespace KSIM
                 }
 
                 // Safely update last known timestamp
-                // Optimistically update lastTimestamp to be ready to be written to clients
+                // Optimistically update LastTimestamp to be ready to be written to clients
                 if(connectedClients.Count > 0)
-                    Interlocked.Exchange(ref lastTimestamp, curTimestamp);
+                    LastTimestamp = curTimestamp;
 
 
                 // We are ensured that all the subscribed frames have already been cached
@@ -240,7 +240,7 @@ namespace KSIM
             if (f == null)
                 return;
 
-            f.Timestamp = Interlocked.Read(ref lastTimestamp);
+            f.Timestamp = LastTimestamp;
             
             List<TcpClient> clientsToBeDisconnected = new List<TcpClient>();
 
