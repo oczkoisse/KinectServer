@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Kinect;
 using System.IO;
+using Microsoft.Speech.Recognition;
 
 namespace KSIM.Readers
 {
@@ -16,12 +17,17 @@ namespace KSIM.Readers
         {
             throw new NotImplementedException("This Reader cannot read from a AudioBeamFrameList. Pass MultiSourceFrame instead.");
         }
+
+        public virtual Frame Read(RecognitionResult lf)
+        {
+            throw new NotImplementedException("This Reader cannot read from a RecognitionResult. Pass MultiSourceFrame instead.");
+        }
     }
 
     // All frame types start internally from 1
     // i.e. if a client sends all zeros that is invalid frame type
     // The corresponding bit pattern that client should send for requesting a stream is computed as 2**frame_type
-    public enum FrameType { Color=1, Skeleton, Audio, Depth, ClosestBody, LHDepth, RHDepth, HeadDepth };
+    public enum FrameType { Color=1, Speech, Audio, Depth, ClosestBody, LHDepth, RHDepth, HeadDepth };
 
     public static class FrameTypeExtensions
     {
@@ -32,7 +38,7 @@ namespace KSIM.Readers
         private static HeadDepthReader hdr = new HeadDepthReader();
         private static AudioReader ar = new AudioReader();
         private static ColorReader cr = new ColorReader();
-
+        
         public static Reader GetReader(this FrameType ft)
         {
             switch(ft)

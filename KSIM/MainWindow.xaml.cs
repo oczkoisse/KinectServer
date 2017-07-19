@@ -20,6 +20,8 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Threading;
+using Microsoft.Speech.AudioFormat;
+using Microsoft.Speech.Recognition;
 
 namespace KSIM
 {
@@ -33,14 +35,17 @@ namespace KSIM
         private TcpListener server = new TcpListener(IPAddress.Any, PORT);
         private Dictionary<TcpClient, List<Readers.FrameType>> connectedClients = new Dictionary<TcpClient, List<Readers.FrameType>>();
         private List<TcpClient> connectedAudioClients = new List<TcpClient>();
+        private List<TcpClient> connectedSpeechClients = new List<TcpClient>();
 
         private KinectSensor sensor = null;
         private MultiSourceFrameReader multiSourceFrameReader = null;
         private AudioBeamFrameReader audioFrameReader = null;
+        private Pcm16Stream audioStream;
+        private SpeechRecognitionEngine speechEngine;
 
-        // To keep sync between MultiSouceFrame and AudioBeamFrame
-        private long lastTimestamp = 0;
-
+        // To keep sync between MultiSouceFrame, AudioBeamFrame and Speech stream
+        // Note that we cannot ensure perfect sync between AudioBeamFrame and Speech stream
+        private long lastTimestamp;
         private long LastTimestamp
         {
             get { return Interlocked.Read(ref lastTimestamp); }
@@ -75,26 +80,35 @@ namespace KSIM
 
             List<Readers.FrameType> activeFrames = GetActiveFrames(requestedFrames);
 
-            if (activeFrames.Count >= 1)
+            if (activeFrames.Count == 1)
             {
-                if (activeFrames.Count == 1 && activeFrames[0] == FrameType.Audio)
+                if (activeFrames[0] == FrameType.Audio)
                 {
-                    lock(connectedAudioClients)
+                    lock (connectedAudioClients)
                     {
                         connectedAudioClients.Add(c);
                         Trace.WriteLine(String.Format("Accepted connection from {0}", c.Client.RemoteEndPoint.ToString()));
                         Trace.WriteLine((int)activeFrames[0]);
                     }
                 }
-                else if (!activeFrames.Contains(FrameType.Audio))
+                else if (activeFrames[0] == FrameType.Speech)
                 {
-                    lock (connectedClients)
+                    lock (connectedSpeechClients)
                     {
-                        connectedClients.Add(c, activeFrames);
+                        connectedSpeechClients.Add(c);
                         Trace.WriteLine(String.Format("Accepted connection from {0}", c.Client.RemoteEndPoint.ToString()));
-                        foreach (var ft in activeFrames)
-                            Trace.WriteLine((int)ft);
+                        Trace.WriteLine((int)activeFrames[0]);
                     }
+                }
+            }
+            else if (!activeFrames.Contains(FrameType.Audio) && !activeFrames.Contains(FrameType.Speech))
+            {
+                lock (connectedClients)
+                {
+                    connectedClients.Add(c, activeFrames);
+                    Trace.WriteLine(String.Format("Accepted connection from {0}", c.Client.RemoteEndPoint.ToString()));
+                    foreach (var ft in activeFrames)
+                        Trace.WriteLine((int)ft);
                 }
             }
             else
@@ -249,6 +263,7 @@ namespace KSIM
                 f.Serialize(ms);
                 // Dispose quickly else Kinect will hang
                 f.Dispose();
+                // Cache
                 byte[] dataToSend = ms.ToArray();
                 lock(connectedAudioClients)
                 {
@@ -277,6 +292,41 @@ namespace KSIM
             }
         }
 
+        /// <summary>
+        /// Gets the metadata for the speech recognizer (acoustic model) most suitable to
+        /// process audio from Kinect device.
+        /// </summary>
+        /// <returns>
+        /// RecognizerInfo if found, <code>null</code> otherwise.
+        /// </returns>
+        private static RecognizerInfo TryGetKinectRecognizer()
+        {
+            IEnumerable<RecognizerInfo> recognizers;
+
+            // This is required to catch the case when an expected recognizer is not installed.
+            // By default - the x86 Speech Runtime is always expected. 
+            try
+            {
+                recognizers = SpeechRecognitionEngine.InstalledRecognizers();
+            }
+            catch (System.Runtime.InteropServices.COMException)
+            {
+                return null;
+            }
+
+            foreach (RecognizerInfo recognizer in recognizers)
+            {
+                string value;
+                recognizer.AdditionalInfo.TryGetValue("Kinect", out value);
+                if ("True".Equals(value, StringComparison.OrdinalIgnoreCase) && "en-US".Equals(recognizer.Culture.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return recognizer;
+                }
+            }
+
+            return null;
+        }
+
 
         private bool InitializeKinect()
         {
@@ -284,7 +334,6 @@ namespace KSIM
             if (sensor != null)
             {
                 var msfr = sensor.OpenMultiSourceFrameReader(FrameSourceTypes.Depth | FrameSourceTypes.Color | FrameSourceTypes.Body);
-                msfr.MultiSourceFrameArrived += Reader_MultiSourceFrameArrived;
 
                 var beams = sensor.AudioSource.AudioBeams;
                 if (beams != null && beams.Count > 0)
@@ -297,23 +346,93 @@ namespace KSIM
                     // it may take a short period of time for the beam to adjust.
                     beams[0].AudioBeamMode = AudioBeamMode.Manual;
                     beams[0].BeamAngle = 0.0f;
+                    
+                    var afr = sensor.AudioSource.OpenReader();
+                    
+                    RecognizerInfo ri = TryGetKinectRecognizer();
+                    if (null != ri)
+                    {
+                        this.audioStream = new Pcm16Stream(beams[0].OpenInputStream());
+                        // let the convertStream know speech is going active
+                        this.audioStream.SpeechActive = true;
 
-                    var afr = sensor.AudioSource.OpenReader(); 
-                    afr.FrameArrived += Reader_AudioFrameArrived;
+                        this.speechEngine = new SpeechRecognitionEngine(ri.Id);
 
-                    // Need to convert this to PCM 16 so that speech recognizer can understand it
-                    //Stream speechStream = beams[0].OpenInputStream();
+                        var utterances = new Choices();
+                        utterances.Add(new SemanticResultValue("forward", "FORWARD"));
+
+                        var gb = new GrammarBuilder { Culture = ri.Culture };
+                        gb.Append(utterances);
+
+                        this.speechEngine.LoadGrammar(new Grammar(gb));
+                        
+                        
+                        this.speechEngine.SetInputToAudioStream(
+                            this.audioStream, new SpeechAudioFormatInfo(EncodingFormat.Pcm, 16000, 16, 1, 32000, 2, null));
+                        this.speechEngine.RecognizeAsync(RecognizeMode.Single);
+                    }
 
                     sensor.Open();
 
                     this.sensor = sensor;
+
                     this.multiSourceFrameReader = msfr;
+                    multiSourceFrameReader.MultiSourceFrameArrived += Reader_MultiSourceFrameArrived;
+
                     this.audioFrameReader = afr;
+                    audioFrameReader.FrameArrived += Reader_AudioFrameArrived;
+
+                    speechEngine.SpeechRecognized += this.SpeechRecognized;
 
                     return true;
                 }
             }
             return false;
+        }
+
+        private void SpeechRecognized(object sender, SpeechRecognizedEventArgs e)
+        {
+            var result = e.Result;
+
+            var f = (SpeechFrame)KSIM.Readers.FrameType.Audio.GetReader().Read(result);
+            if (f == null)
+                return;
+
+            f.Timestamp = LastTimestamp;
+
+            List<TcpClient> clientsToBeDisconnected = new List<TcpClient>();
+
+            using (var ms = new MemoryStream())
+            {
+                f.Serialize(ms);
+                f.Dispose();
+                // Cache
+                byte[] dataToSend = ms.ToArray();
+                lock (connectedSpeechClients)
+                {
+                    foreach (var client in connectedSpeechClients)
+                    {
+                        try
+                        {
+                            client.GetStream().Write(dataToSend, 0, dataToSend.Length);
+                        }
+                        catch (IOException)
+                        {
+                            Trace.WriteLine(String.Format("Client {0} disconnected", client.Client.RemoteEndPoint.ToString()));
+                            clientsToBeDisconnected.Add(client);
+                            // No need to send other frames subscribed by the client since it is already disconnected
+                            break;
+                        }
+                    }
+
+                    // Remove clients that are already disconnected
+                    foreach (var client in clientsToBeDisconnected)
+                    {
+                        client.Close();
+                        connectedSpeechClients.Remove(client);
+                    }
+                }
+            }
         }
 
         private void Window_Closed(object sender, EventArgs e)
@@ -342,6 +461,18 @@ namespace KSIM
                 audioFrameReader.FrameArrived -= Reader_AudioFrameArrived;
                 audioFrameReader.Dispose();
             }
+
+            if (audioStream != null)
+            {
+                audioStream.SpeechActive = false;
+            }
+
+            if (speechEngine != null)
+            {
+                speechEngine.SpeechRecognized -= SpeechRecognized;
+                speechEngine.RecognizeAsyncStop();
+            }
+
             if (sensor != null)
                 sensor.Close();
         }
