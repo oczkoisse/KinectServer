@@ -32,7 +32,6 @@ namespace KSIM.Readers
             }
             return null;
         }
-        
     }
 
     class AudioFrame : Frame
@@ -117,7 +116,6 @@ namespace KSIM.Readers
                 writer.Write(loadSize);
                 writer.Seek(0, SeekOrigin.End);
             }
-        
         }
 
         protected override void Dispose(bool disposing)

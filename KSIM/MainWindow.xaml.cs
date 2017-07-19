@@ -39,7 +39,13 @@ namespace KSIM
         private AudioBeamFrameReader audioFrameReader = null;
 
         // To keep sync between MultiSouceFrame and AudioBeamFrame
-        private long lastTimestamp;
+        private long lastTimestamp = 0;
+
+        private long LastTimestamp
+        {
+            get { return Interlocked.Read(ref lastTimestamp); }
+            set { Interlocked.Exchange(ref lastTimestamp, value); }
+        }
 
         private void HandleNewClient(IAsyncResult res)
         {
@@ -129,7 +135,7 @@ namespace KSIM
 
         public MainWindow()
         {
-            Interlocked.Exchange(ref lastTimestamp, Int64.MinValue);
+            LastTimestamp = Int64.MinValue;
             bool success = InitializeKinect();
             if (success)
             {
@@ -143,7 +149,7 @@ namespace KSIM
         {
             MultiSourceFrame msf = e.FrameReference.AcquireFrame();
 
-            long prevTimestamp = Interlocked.Read(ref lastTimestamp);
+            long prevTimestamp = LastTimestamp;
             long curTimestamp = DateTime.Now.Ticks;
 
             
@@ -269,7 +275,6 @@ namespace KSIM
                     }
                 }
             }
-            
         }
 
 
@@ -295,6 +300,9 @@ namespace KSIM
 
                     var afr = sensor.AudioSource.OpenReader(); 
                     afr.FrameArrived += Reader_AudioFrameArrived;
+
+                    // Need to convert this to PCM 16 so that speech recognizer can understand it
+                    //Stream speechStream = beams[0].OpenInputStream();
 
                     sensor.Open();
 
