@@ -81,7 +81,7 @@ namespace KSIM.Readers
             int j = 0;
             foreach (var sframe in UnderlyingAudioFrame.SubFrames)
             {
-                Debug.Write(sframe.BeamAngleConfidence.ToString() + "\n");
+                //Debug.Write(sframe.BeamAngleConfidence.ToString() + "\n");
                 if (sframe.BeamAngleConfidence >= 0.8)
                 {
                     // May want to filter out subframes with low confidence for beam angle

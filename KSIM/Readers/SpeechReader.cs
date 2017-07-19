@@ -48,6 +48,7 @@ namespace KSIM.Readers
             if (r.Confidence >= 0.3)
             {
                 command = r.Semantics.Value.ToString();
+                Debug.Write(command + "\n");
                 hasData = true;
             }
         }
