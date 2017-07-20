@@ -18,7 +18,11 @@ namespace KSIM.Readers
 
             if (cbf != null && originalDepthFrame != null)
             {
-                return new LHDepthFrame(originalDepthFrame, cbf);
+                var lhdf = new LHDepthFrame(originalDepthFrame, cbf);
+                if (lhdf.Segmented)
+                    return lhdf;
+                else
+                    lhdf.Dispose();
             }
             else
             {

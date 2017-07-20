@@ -30,6 +30,12 @@ namespace KSIM.Readers
             get { return yEnd - yStart; }
         }
 
+        private bool segmented = false;
+        public bool Segmented
+        {
+            get { return segmented; }
+        }
+
         public SegmentedDepthFrame(Microsoft.Kinect.DepthFrame df, ClosestBodyFrame cbf) : base(df)
         {
             underlyingClosestBodyFrame = cbf;
@@ -37,9 +43,10 @@ namespace KSIM.Readers
             SetCenter();
 
             // May want to throw an invalid state exception if cropping fails
-            Crop();
+            segmented = Segment();
 
-            Threshold();
+            if (segmented)
+                Threshold();
         }
 
         protected abstract void SetCenter();
@@ -66,7 +73,7 @@ namespace KSIM.Readers
 
         private ushort posZ = 0;
 
-        protected virtual bool Crop()
+        protected virtual bool Segment()
         {
             int index = IndexIntoDepthData(posX, posY);
             if (index == -1)
@@ -86,6 +93,9 @@ namespace KSIM.Readers
                 xEnd = fallbackSize;
                 yStart = 0;
                 yEnd = fallbackSize;
+                // Overwrite posX and posY because they are not in the original frame now
+                posX = fallbackSize / 2.0f;
+                posY = fallbackSize / 2.0f;
             }
             else
             {
