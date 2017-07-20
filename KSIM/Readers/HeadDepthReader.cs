@@ -15,10 +15,11 @@ namespace KSIM.Readers
             // that responsibility is delegated to newly created frame
             var originalDepthFrame = f.DepthFrameReference.AcquireFrame();
             var cbf = (ClosestBodyFrame)FrameType.ClosestBody.GetReader().Read(f);
+            var originalBodyIndexFrame = f.BodyIndexFrameReference.AcquireFrame();
 
-            if (cbf != null && originalDepthFrame != null)
+            if (cbf != null && originalDepthFrame != null && originalBodyIndexFrame != null)
             {
-                return new HeadDepthFrame(originalDepthFrame, cbf);
+                return new LHDepthFrame(originalDepthFrame, originalBodyIndexFrame, cbf);
             }
             else
             {
@@ -26,6 +27,8 @@ namespace KSIM.Readers
                     cbf.Dispose();
                 if (originalDepthFrame != null)
                     originalDepthFrame.Dispose();
+                if (originalBodyIndexFrame != null)
+                    originalBodyIndexFrame.Dispose();
             }
             return null;
         }
@@ -33,7 +36,7 @@ namespace KSIM.Readers
 
     public sealed class HeadDepthFrame : SegmentedDepthFrame
     {
-        public HeadDepthFrame(Microsoft.Kinect.DepthFrame df, ClosestBodyFrame cbf) : base(df, cbf)
+        public HeadDepthFrame(Microsoft.Kinect.DepthFrame df, Microsoft.Kinect.BodyIndexFrame bif, ClosestBodyFrame cbf) : base(df, bif, cbf)
         {
             Type = FrameType.HeadDepth;
         }

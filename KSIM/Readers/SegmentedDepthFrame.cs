@@ -30,15 +30,15 @@ namespace KSIM.Readers
             get { return yEnd - yStart; }
         }
 
-        public SegmentedDepthFrame(Microsoft.Kinect.DepthFrame df, ClosestBodyFrame cbf) : base(df)
+        public SegmentedDepthFrame(Microsoft.Kinect.DepthFrame df, Microsoft.Kinect.BodyIndexFrame bif, ClosestBodyFrame cbf) : base(df, bif)
         {
+            Clean(cbf.Index);
+
             underlyingClosestBodyFrame = cbf;
 
             SetCenter();
-
             // May want to throw an invalid state exception if cropping fails
             Crop();
-
             Threshold();
         }
 

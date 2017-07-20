@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Kinect;
 using System.IO;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 
 namespace KSIM.Readers
 {
@@ -17,11 +18,18 @@ namespace KSIM.Readers
             // Note that we do not dispose the acquired frame
             // that responsibility is delegated to newly created frame
             var originalFrame = f.DepthFrameReference.AcquireFrame();
-            
-            if (originalFrame == null)
-                return null;
+            var originalBodyIndexFrame = f.BodyIndexFrameReference.AcquireFrame();
+
+            if (originalFrame != null && originalBodyIndexFrame != null)
+                return new DepthFrame(originalFrame, originalBodyIndexFrame);
             else
-                return new DepthFrame(originalFrame);
+            {
+                if (originalFrame != null)
+                    originalFrame.Dispose();
+                if (originalBodyIndexFrame != null)
+                    originalBodyIndexFrame.Dispose();
+            }
+            return null;
         }
     }
 
@@ -30,7 +38,6 @@ namespace KSIM.Readers
         private bool disposed = false;
 
         private Microsoft.Kinect.DepthFrame underlyingDepthFrame = null;
-
         protected Microsoft.Kinect.DepthFrame UnderlyingDepthFrame
         {
             get { return underlyingDepthFrame; }
@@ -44,6 +51,12 @@ namespace KSIM.Readers
             {
                 return Array.AsReadOnly(depthData);
             }
+        }
+
+        private BodyIndexFrame underlyingBodyIndexFrame = null;
+        protected BodyIndexFrame UnderlyingBodyIndexFrame
+        {
+            get { return underlyingBodyIndexFrame; }
         }
 
         protected int IndexIntoDepthData(float x, float y)
@@ -61,10 +74,12 @@ namespace KSIM.Readers
         }
 
 
-        public DepthFrame(Microsoft.Kinect.DepthFrame df)
+        public DepthFrame(Microsoft.Kinect.DepthFrame df, Microsoft.Kinect.BodyIndexFrame bif)
         {
             Type = FrameType.Depth;
             this.underlyingDepthFrame = df;
+            this.underlyingBodyIndexFrame = bif;
+
             // Set Dimensions of the depth frame
             Width = df.DepthFrameSource.FrameDescription.Width;
             Height = df.DepthFrameSource.FrameDescription.Height;
@@ -75,6 +90,20 @@ namespace KSIM.Readers
 
             // Copy depth data to memory reserved earlier
             df.CopyFrameDataToArray(this.depthData);
+            
+        }
+
+        public void Clean(int index)
+        {
+            byte[] bodyIndexData = new byte[Width * Height];
+            underlyingBodyIndexFrame.CopyFrameDataToArray(bodyIndexData);
+            Debug.Assert(depthData.Length == bodyIndexData.Length);
+            for (int i=0; i<depthData.Length; i++)
+            {
+                if (bodyIndexData[i] == 255)
+                    //The maximum depth distance is 8 meters
+                    depthData[i] = 8000;
+            }
         }
 
         public override void Serialize(Stream s)
@@ -119,6 +148,8 @@ namespace KSIM.Readers
                     // dispose managed state (managed objects)
                     if (underlyingDepthFrame != null)
                         underlyingDepthFrame.Dispose();
+                    if (underlyingBodyIndexFrame != null)
+                        underlyingBodyIndexFrame.Dispose();
                 }
             }
             disposed = true;

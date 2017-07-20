@@ -385,7 +385,7 @@ namespace KSIM
             var sensor = KinectSensor.GetDefault();
             if (sensor != null)
             {
-                var msfr = sensor.OpenMultiSourceFrameReader(FrameSourceTypes.Depth | FrameSourceTypes.Color | FrameSourceTypes.Body);
+                var msfr = sensor.OpenMultiSourceFrameReader(FrameSourceTypes.Depth | FrameSourceTypes.Color | FrameSourceTypes.Body | FrameSourceTypes.BodyIndex);
 
                 var beams = sensor.AudioSource.AudioBeams;
                 if (beams != null && beams.Count > 0)
