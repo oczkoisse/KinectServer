@@ -80,40 +80,48 @@ namespace KSIM
 
             List<Readers.FrameType> activeFrames = GetActiveFrames(requestedFrames);
 
-            if (activeFrames.Count == 1)
+            if (activeFrames.Count >= 1)
             {
-                if (activeFrames[0] == FrameType.Audio)
+                if (!activeFrames.Contains(FrameType.Audio) && !activeFrames.Contains(FrameType.Speech))
                 {
-                    lock (connectedAudioClients)
+                    lock (connectedClients)
                     {
-                        connectedAudioClients.Add(c);
+                        connectedClients.Add(c, activeFrames);
                         Trace.WriteLine(String.Format("Accepted connection from {0}", c.Client.RemoteEndPoint.ToString()));
-                        Trace.WriteLine((int)activeFrames[0]);
+                        foreach (var ft in activeFrames)
+                            Trace.WriteLine((int)ft);
                     }
                 }
-                else if (activeFrames[0] == FrameType.Speech)
+                else if (activeFrames.Count == 1)
                 {
-                    lock (connectedSpeechClients)
+                    if (activeFrames[0] == FrameType.Audio)
                     {
-                        connectedSpeechClients.Add(c);
-                        Trace.WriteLine(String.Format("Accepted connection from {0}", c.Client.RemoteEndPoint.ToString()));
-                        Trace.WriteLine((int)activeFrames[0]);
+                        lock (connectedAudioClients)
+                        {
+                            connectedAudioClients.Add(c);
+                            Trace.WriteLine(String.Format("Accepted connection from {0}", c.Client.RemoteEndPoint.ToString()));
+                            Trace.WriteLine((int)activeFrames[0]);
+                        }
+                    }
+                    else if (activeFrames[0] == FrameType.Speech)
+                    {
+                        lock (connectedSpeechClients)
+                        {
+                            connectedSpeechClients.Add(c);
+                            Trace.WriteLine(String.Format("Accepted connection from {0}", c.Client.RemoteEndPoint.ToString()));
+                            Trace.WriteLine((int)activeFrames[0]);
+                        }
                     }
                 }
-            }
-            else if (!activeFrames.Contains(FrameType.Audio) && !activeFrames.Contains(FrameType.Speech))
-            {
-                lock (connectedClients)
+                else
                 {
-                    connectedClients.Add(c, activeFrames);
-                    Trace.WriteLine(String.Format("Accepted connection from {0}", c.Client.RemoteEndPoint.ToString()));
-                    foreach (var ft in activeFrames)
-                        Trace.WriteLine((int)ft);
+                    Trace.WriteLine(String.Format("Rejecting client {0} because it is not possible to combine Audio/Speech stream with other streams.", c.Client.RemoteEndPoint.ToString()));
+                    c.Close();
                 }
             }
             else
             {
-                Trace.WriteLine(String.Format("Rejecting client {0} because of an unrecognized stream type", c.Client.RemoteEndPoint.ToString()));
+                Trace.WriteLine(String.Format("Rejecting client {0} because of an unrecognized stream type(s)", c.Client.RemoteEndPoint.ToString()));
                 c.Close();
             }
         }
