@@ -90,7 +90,7 @@ namespace KSIM.Readers
 
             // Copy depth data to memory reserved earlier
             df.CopyFrameDataToArray(this.depthData);
-            
+
         }
 
         public void Clean(int index)
@@ -98,9 +98,9 @@ namespace KSIM.Readers
             byte[] bodyIndexData = new byte[Width * Height];
             underlyingBodyIndexFrame.CopyFrameDataToArray(bodyIndexData);
             Debug.Assert(depthData.Length == bodyIndexData.Length);
-            for (int i=0; i<depthData.Length; i++)
+            for (int i = 0; i < depthData.Length; i++)
             {
-                if (bodyIndexData[i] == 255)
+                if (bodyIndexData[i] != index)
                     //The maximum depth distance is 8 meters
                     depthData[i] = 8000;
             }
