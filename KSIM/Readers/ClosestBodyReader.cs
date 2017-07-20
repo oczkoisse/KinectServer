@@ -113,17 +113,24 @@ namespace KSIM.Readers
             get { return BodyFound ? closestBody.JointOrientations : null; }
         }
 
+        private int closestIndex;
+        public int Index
+        {
+            get { return BodyFound ? closestIndex : -1; }
+        }
+
         public ClosestBodyFrame(Microsoft.Kinect.BodyFrame bf)
         {
             Type = FrameType.ClosestBody;
             this.underlyingBodyFrame = bf;
-
+            
             Body[] bodies = new Body[bf.BodyCount];
             bf.GetAndRefreshBodyData(bodies);
 
-            foreach (Body body in bodies)
+            for (int i = 0; i < bodies.Length; i++)
             {
-                
+                var body = bodies[i];
+
                 if (body.IsTracked)
                 {
                     var pos = body.Joints[JointType.SpineBase].Position;
@@ -134,6 +141,7 @@ namespace KSIM.Readers
                     {
                         closestBody = body;
                         closestNormSqr = normSqr;
+                        closestIndex = i;
                     }
 
                     trackedCount++;
