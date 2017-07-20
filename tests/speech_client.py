@@ -42,7 +42,7 @@ def decode_frame(raw_frame):
 
     timestamp, frame_type, command_length = header
     
-    print timestamp, frame_type, command_length
+    #print timestamp, frame_type, command_length
     
     command_format = str(command_length) + "s"
     
@@ -64,7 +64,7 @@ def recv_speech_frame(sock):
     Experimental function to read each stream frame from the server
     """
     (frame_size,) = struct.unpack("<i", recv_all(sock, 4))
-    print frame_size
+    #print frame_size
     return recv_all(sock, frame_size) 
     
 
@@ -73,7 +73,10 @@ if __name__ == '__main__':
     s = connect()
 
     while True:
-        f = recv_speech_frame(s)
+        try:
+            f = recv_speech_frame(s)
+        except:
+            break
         timestamp, frame_type, command = decode_frame(f)
         print timestamp, frame_type, command
         print "\n\n"

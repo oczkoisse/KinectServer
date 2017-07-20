@@ -412,8 +412,26 @@ namespace KSIM
 
                         var utterances = new Choices();
                         utterances.Add(new SemanticResultValue("left", "LEFT"));
+                        utterances.Add(new SemanticResultValue("to the left", "LEFT"));
+                        utterances.Add(new SemanticResultValue("to my left", "LEFT"));
+                        utterances.Add(new SemanticResultValue("to your right", "LEFT"));
+
                         utterances.Add(new SemanticResultValue("right", "RIGHT"));
-                        utterances.Add(new SemanticResultValue("hello", "HELLO"));
+                        utterances.Add(new SemanticResultValue("to the right", "RIGHT"));
+                        utterances.Add(new SemanticResultValue("to my right", "RIGHT"));
+                        utterances.Add(new SemanticResultValue("to your left", "RIGHT"));
+
+                        utterances.Add(new SemanticResultValue("yes", "YES"));
+                        utterances.Add(new SemanticResultValue("yeah", "YES"));
+
+                        utterances.Add(new SemanticResultValue("no", "NO"));
+
+                        utterances.Add(new SemanticResultValue("red", "RED"));
+                        utterances.Add(new SemanticResultValue("the red one", "RED"));
+                        utterances.Add(new SemanticResultValue("blue", "BLUE"));
+                        utterances.Add(new SemanticResultValue("the blue one", "BLUE"));
+                        utterances.Add(new SemanticResultValue("green", "GREEN"));
+                        utterances.Add(new SemanticResultValue("the green one", "GREEN"));
 
                         var gb = new GrammarBuilder { Culture = ri.Culture };
                         gb.Append(utterances);
