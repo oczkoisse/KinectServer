@@ -1,10 +1,9 @@
 import random
 import socket
 import struct
-import time
-from collections import deque
-
+import sys
 import numpy as np
+import wave
 
 src_addr = '127.0.0.1'
 src_port = 8000
@@ -72,16 +71,33 @@ def recv_audio_frame(sock):
     
 if __name__ == '__main__':
     s = connect()
-    sign = lambda x: 1 if x >= 0.0 else -1 
+    if s is None:
+        sys.exit(0)
+        
+    sign = lambda x: 1 if x >= 0.0 else -1
+    
+    do_write = True if len(sys.argv) > 1 and sys.argv[1] == '--write' else False
+
+    if do_write:
+        out_file = sys.argv[2] if len(sys.argv) > 2 else 'out.wav' 
+        outwav = wave.open(out_file, 'wb')
+        outwav.setparams((1, 2, 16000, 0, "NONE", "NONE"))
+    
     while True:
         try:
             f = recv_audio_frame(s)
             timestamp, frame_type, sample_count, samples = decode_frame(f)
             # PCM-16
             samples = [ int(sm * 32767) if -1.0 <= sm <= 1.0 else (sign(sm) * 32767 ) for sm in samples ]
+            if do_write:
+                outwav.writeframes(struct.pack('<' + str(len(samples)) + 'h', *samples))
             print timestamp, frame_type, sample_count, random.sample(samples, 5), max(samples)
         except:
-            s.close()
+            
+            
             break
         print "\n\n"
-        
+       
+    s.close()
+    if do_write:
+        outwav.close()

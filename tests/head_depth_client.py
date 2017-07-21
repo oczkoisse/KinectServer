@@ -32,13 +32,10 @@ def connect():
     return sock
     
 
-# timestamp (long) | depth_hands_count(int) | left_hand_height (int) | left_hand_width (int) |
-# right_hand_height (int) | right_hand_width (int)| left_hand_pos_x (float) | left_hand_pos_y (float) | ... |
-# left_hand_depth_data ([left_hand_width * left_hand_height]) |
-# right_hand_depth_data ([right_hand_width * right_hand_height])
+# Timestamp | frame type | width | height | depth_data
 def decode_frame(raw_frame):
     
-    # Expect network byte order
+    # Expect little endian byte order
     endianness = "<"
 
     # In each frame, a header is transmitted
@@ -71,15 +68,15 @@ def recv_depth_frame(sock):
     return recv_all(sock, frame_size) 
     
 
-# By default read 100 frames
 if __name__ == '__main__':
 
-    # Time the network performance 
     s = connect()
+    if s is None:
+        sys.exit(0)
     
     i = 0
-
     avg_frame_time = 0.0
+    do_plot = True if len(sys.argv) > 1 and sys.argv[1] == '--plot' else False
 
     while True:
         try:
@@ -92,7 +89,6 @@ if __name__ == '__main__':
         avg_frame_time += (t_end - t_begin)
         timestamp, frame_type, width, height, posx, posy, depth_data = decode_frame(f)
         print timestamp, frame_type, width, height
-        do_plot = True if len(sys.argv) > 1 and sys.argv[1] == '--plot' else False
         
         if do_plot and i % 20 == 0 and height*width > 0:
             image = np.array(depth_data).reshape((height, width))

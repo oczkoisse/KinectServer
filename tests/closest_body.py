@@ -1,8 +1,5 @@
 import socket
 import struct
-from collections import deque
-
-import numpy as np
 
 src_addr = '127.0.0.1'
 src_port = 8000
@@ -81,6 +78,9 @@ def recv_skeleton_frame(sock):
     
 if __name__ == '__main__':
     s = connect()
+    if s is None:
+        sys.exit(0)
+        
     while True:
         try:
             f = recv_skeleton_frame(s)

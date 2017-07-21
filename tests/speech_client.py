@@ -27,10 +27,11 @@ def connect():
         return None
     print "Successfully connected to host"
     return sock
-    
+
+# Timestamp | frame type | command_length | command
 def decode_frame(raw_frame):
     
-    # Expect network byte order
+    # Expect little endian byte order
     endianness = "<"
 
     # In each frame, a header is transmitted
@@ -71,7 +72,9 @@ def recv_speech_frame(sock):
 if __name__ == '__main__':
 
     s = connect()
-
+    if s is None:
+        sys.exit(0)
+    
     while True:
         try:
             f = recv_speech_frame(s)
