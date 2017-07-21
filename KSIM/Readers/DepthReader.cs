@@ -54,7 +54,12 @@ namespace KSIM.Readers
         protected int IndexIntoDepthData(int x, int y)
         {
             // Need to check the boundaries of the actual frame to be sure we are returning a valid index
-            if (x >= 0 && x < Width && y >= 0 && y < Height)
+            // Note that it allows one off the end boundaries for x (width)
+            // This allows you to write loops in the usual "less than length" fashion
+            // when applying an operation row wise.
+            // However the bound is strictly enforced in y direction, since there may not
+            // be a use case for applying an operation column wise
+            if (x >= 0 && x <= Width && y >= 0 && y < Height)
                 return y * Width + x;
             else
                 return -1;
