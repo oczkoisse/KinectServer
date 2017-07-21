@@ -64,11 +64,11 @@ namespace KSIM.Readers
 
         private const float fx = 288.03f,
                             fy = 287.07f;
-
-        // Should be set by Segment()
+        
+        // Correspond to the boundaries of Virtual Frame computed by Segment()
         protected int xStart = 0, xEnd = 0, yStart = 0, yEnd = 0;
 
-        // Should be set by SetCenter()
+        // Correspond to the point w.r.t. which the virtual frame is computed
         protected float posX = 0.0f, posY = 0.0f;
 
         private ushort posZ = 0;
@@ -174,32 +174,49 @@ namespace KSIM.Readers
 
                 // Write the segmented data using the boundaries determined by Segment()
                 int prepend_zeros = 0, append_zeros = 0, prepend_rows = 0, append_rows = 0;
+
+                // For the left boundary of the actual frame
                 if (xEnd < 0)
+                    // The virtual frame is completely to the left of the boundary
                     prepend_zeros = xEnd - xStart;
                 else if (xStart < 0)
+                    // At least some part of virtual frame is to the left of the boundary
                     prepend_zeros = -xStart;
                 else
+                    // No part of virtual frame is to the left of the boundary
                     prepend_zeros = 0;
 
+                // For the right boundary of the actual frame
                 if (xStart >= Width)
+                    // The virtual frame is completely to the right of the boundary
                     append_zeros = xEnd - xStart;
                 else if (xEnd > Width)
+                    // At least some part of virtual frame is to the right of the boundary
                     append_zeros = xEnd - Width;
                 else
+                    // No part of virtual frame is to the right of the boundary 
                     append_zeros = 0;
 
+                // For the top boundary of the actual frame
                 if (yEnd < 0)
+                    // The virtual frame is completely above the boundary
                     prepend_rows = yEnd - yStart;
                 else if (yStart < 0)
+                    // At least some part of virtual frame is above the boundary
                     prepend_rows = -yStart;
                 else
+                    // No part of virtual frame is above the boundary
                     prepend_rows = 0;
 
+                // For the bottom boundary of the actual frame
                 if (yStart >= Height)
+                    // The virtual frame is completely below the boundary
                     append_rows = yEnd - yStart;
                 else if (yEnd > Height)
+                    // At least some part of virtual frame is below the boundary
                     append_rows = yEnd - Height;
                 else
+                    // No part of virtual frame is below the boundary
                     append_rows = 0;
 
                 int xStartInFrame = xStart >= 0 ? xStart : 0,
@@ -211,7 +228,7 @@ namespace KSIM.Readers
 
                 Debug.Write(String.Format("Virtual frame: ({0}, {1}) and ({2}, {3})\n", xStart, yStart, xEnd, yEnd));
                 
-                //Write prepended zero rows of width xEnd - xStart
+                // Zero rows to account for some part of the virtual frame being above the top boundary of actual frame
                 for (int i = 0; i < prepend_rows; i++)
                     for (int j = 0; j < SegmentedWidth; j++)
                         writer.Write((ushort)0);
@@ -225,20 +242,23 @@ namespace KSIM.Readers
 
                 for (int i = 0; i < yEndInFrame - yStartInFrame; i++)
                 {
+                    // Zero columns to accound for some part of the virtual frame being to the left of actual frame
                     for (int j = 0; j < prepend_zeros; j++)
                         writer.Write((ushort)0);
                     
                     for (int j = xStartInBuffer; j < xEndInBuffer; j++)
                         writer.Write(depthData[j]);
-
+                    
+                    // Go to next row in actual frame
                     xStartInBuffer += Width;
                     xEndInBuffer += Width;
 
+                    // Zero columns to accound for some part of the virtual frame being to the right of actual frame
                     for (int j = 0; j < append_zeros; j++)
                         writer.Write((ushort)0);
                 }
 
-                //Write appended zero rows of width xEnd - xStart
+                // Zero rows to account for some part of the virtual frame being below the bottom boundary of actual frame
                 for (int i = 0; i < append_rows; i++)
                     for (int j = 0; j < SegmentedWidth; j++)
                         writer.Write((ushort)0);

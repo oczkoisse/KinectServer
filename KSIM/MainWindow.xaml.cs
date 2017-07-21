@@ -26,32 +26,94 @@ using Microsoft.Speech.Recognition;
 namespace KSIM
 {
     /// <summary>
-    /// Interaction logic for MainWindow.xaml
+    /// Class holding the interaction logic for MainWindow.xaml.
+    /// In addition, this class also handles new incoming client stream requests and
+    /// interfaces with the underlying Kinect hardware to facilitate these stream requests.
     /// </summary>
     public partial class MainWindow : Window
     {
+        /// <summary>
+        /// The port at which the application listens for incoming stream requests for Kinect clients
+        /// </summary>
         private const int PORT = 8000;
 
+        /// <summary>
+        /// The server object to listen for incoming client requests
+        /// </summary>
         private TcpListener server = new TcpListener(IPAddress.Any, PORT);
+        /// <summary>
+        /// A dictionary for holding stream types subscribed by each client. The subscribed streams should not contain Audio or Speech
+        /// </summary>
         private Dictionary<TcpClient, List<Readers.FrameType>> connectedClients = new Dictionary<TcpClient, List<Readers.FrameType>>();
+
+        /// <summary>
+        /// A dictionary for holding clients subscribed to Audio stream. These clients cannot be subscribed to any other stream.
+        /// </summary>
         private List<TcpClient> connectedAudioClients = new List<TcpClient>();
+
+        /// <summary>
+        /// A dictionary for holding clients subscribed to Speech stream. These clients cannot be subscribed to any other stream.
+        /// </summary>
         private List<TcpClient> connectedSpeechClients = new List<TcpClient>();
 
+        /// <summary>
+        /// Reference to the Kinect sensor. Needed to Close() at the application exit.
+        /// </summary>
         private KinectSensor sensor = null;
+
+        /// <summary>
+        /// Reference to the MultiSourceFrameReader reader got from the Kinect sensor. Needed to Dispose() at the application exit.
+        /// </summary>
         private MultiSourceFrameReader multiSourceFrameReader = null;
+
+        /// <summary>
+        /// Reference to the AudioBeamFrameReader reader got from the Kinect sensor. Needed to Dispose() at the application exit.
+        /// </summary>
         private AudioBeamFrameReader audioFrameReader = null;
+
+        /// <summary>
+        /// Conversion stream needed to convert the raw 32 bit floating point samples emitted by Kinect into PCM 16 bit data
+        /// that can be recognized by the SpeechRecognitionEngine.
+        /// Needed to speechActive = false at application exit
+        /// </summary>
         private Pcm16Stream audioStream;
+
+        /// <summary>
+        /// Reference to the SpeechRecognitionEngine. Needed to stop async recogntion at the application exit.
+        /// </summary>
         private SpeechRecognitionEngine speechEngine;
 
         // To keep sync between MultiSouceFrame, AudioBeamFrame and Speech stream
         // Note that we cannot ensure perfect sync between AudioBeamFrame and Speech stream
         private long lastTimestamp;
+
+        /// <summary>
+        /// Provides an atomic read/write for the last timestamp set in <see cref="Reader_MultiSourceFrameArrived(object, MultiSourceFrameArrivedEventArgs)"/>
+        /// </summary>
+        /// <value>
+        /// The timestamp set in <see cref="Reader_MultiSourceFrameArrived(object, MultiSourceFrameArrivedEventArgs)"/> the last time that event was fired
+        /// </value>
+        /// <remarks>
+        /// This still cannot ensure perfect sync between <see cref="Reader_AudioFrameArrived(object, AudioBeamFrameArrivedEventArgs)"/> 
+        /// and <see cref="Reader_SpeechRecognized(object, SpeechRecognizedEventArgs)"/>, since those operate in their own event threads.
+        /// </remarks>
         private long LastTimestamp
         {
             get { return Interlocked.Read(ref lastTimestamp); }
             set { Interlocked.Exchange(ref lastTimestamp, value); }
         }
 
+        /// <summary>
+        /// Handles incoming client connections. The current implementation verifies these requests by
+        /// reading first 4 bytes sent by the client, which are are validated by <see cref="GetActiveFrames(byte[])"/> into a list of stream types.
+        /// The client is accepted as a valid subscriber if and only if one of the following is true:
+        /// <list type="bullet">
+        /// <item> The client request only constitutes the Audio stream type</item>
+        /// <item> The client request only constitutes the Speech stream type</item>
+        /// <item> The client request contains one or more stream types other than Audio and Speech</item>
+        /// </list> 
+        /// </summary>
+        /// <param name="res"></param>
         private void HandleNewClient(IAsyncResult res)
         {
             TcpClient c = null;
@@ -72,18 +134,21 @@ namespace KSIM
             ContinueAcceptConnections();
 
 
-            // Meanwhile read first four bytes of this client
-            // 31 bits for receiving frame type or a combination thereof
+            // Read first four bytes of this client
             byte[] requestedFrames = new byte[] { 0x0, 0x0, 0x0, 0x0 };
             int bytesRead = c.GetStream().Read(requestedFrames, 0, 4);
             Debug.Assert(bytesRead == 4);
 
+            // Get a list of valid stream types from these 4 bytes
             List<Readers.FrameType> activeFrames = GetActiveFrames(requestedFrames);
 
+            // If there are one or more valid stream requests
             if (activeFrames.Count >= 1)
             {
+                // If the request does not involve either Audio or Speech
                 if (!activeFrames.Contains(FrameType.Audio) && !activeFrames.Contains(FrameType.Speech))
                 {
+                    // Add the client to list of connected clients other than speech and audio clients
                     lock (connectedClients)
                     {
                         connectedClients.Add(c, activeFrames);
@@ -92,8 +157,10 @@ namespace KSIM
                             Trace.WriteLine((int)ft);
                     }
                 }
+                // If the request contains only 1 stream type, which consists either Audio or Speech
                 else if (activeFrames.Count == 1)
                 {
+                    // If Audio, add to the list of connected clients for Audio
                     if (activeFrames[0] == FrameType.Audio)
                     {
                         lock (connectedAudioClients)
@@ -103,6 +170,8 @@ namespace KSIM
                             Trace.WriteLine((int)activeFrames[0]);
                         }
                     }
+                    // If Speech, add to the list of connected clients for Speech
+                    // Acutally, don't need the following check
                     else if (activeFrames[0] == FrameType.Speech)
                     {
                         lock (connectedSpeechClients)
@@ -115,17 +184,49 @@ namespace KSIM
                 }
                 else
                 {
+                    // Reject as an invalid stream as the stream contains a combination of Audio/Speech with other stream types
                     Trace.WriteLine(String.Format("Rejecting client {0} because it is not possible to combine Audio/Speech stream with other streams.", c.Client.RemoteEndPoint.ToString()));
                     c.Close();
                 }
             }
             else
             {
+                // Reject as no valid stream was identified
                 Trace.WriteLine(String.Format("Rejecting client {0} because of an unrecognized stream type(s)", c.Client.RemoteEndPoint.ToString()));
                 c.Close();
             }
         }
 
+
+        /// <summary>
+        /// Decodes the input bytes into a list of frame types. Currently, bits 1-31 are the only ones considered, which correspond to frame types as follows:
+        /// <list type="table">
+        /// <listheader>
+        /// <term>Bit position</term>
+        /// <description>Frame type</description>
+        /// </listheader>
+        /// <item>
+        /// <term>1</term>
+        /// <description>Color</description>
+        /// <term>2</term>
+        /// <description>Speech</description>
+        /// <term>3</term>
+        /// <description>Audio</description>
+        /// <term>4</term>
+        /// <description>Depth</description>
+        /// <term>5</term>
+        /// <description>Closest Body</description>
+        /// <term>6</term>
+        /// <description>Left Hand Depth</description>
+        /// <term>7</term>
+        /// <description>Right Hand Depth</description>
+        /// <term>8</term>
+        /// <description>Head Depth</description>
+        /// </item>
+        /// </list>
+        /// </summary>
+        /// <param name="frameBytes"></param>
+        /// <returns>A list of frame types as decoded from the input bytes</returns>
         private List<Readers.FrameType> GetActiveFrames(byte[] frameBytes)
         {
             List<Readers.FrameType> activeFrames = new List<Readers.FrameType>();
@@ -143,6 +244,10 @@ namespace KSIM
             return activeFrames;
         }
 
+
+        /// <summary>
+        /// Starts an asynchronous client accept operation
+        /// </summary>
         private void ContinueAcceptConnections()
         {
             try
@@ -155,6 +260,12 @@ namespace KSIM
             }
         }
 
+        /// <summary>
+        /// The constructor for MainWindow class. Sets the default value for <see cref="LastTimestamp"/> as minimum possible for 64-bit signed integer.
+        /// Initializes the Kinect sensor, along with different native frame readers. 
+        /// If successfull, also starts a server for accepting client requests for different streams.
+        /// Finally, setups the window controls
+        /// </summary>
         public MainWindow()
         {
             LastTimestamp = Int64.MinValue;
