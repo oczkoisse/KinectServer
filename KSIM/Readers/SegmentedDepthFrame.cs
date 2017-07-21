@@ -42,7 +42,7 @@ namespace KSIM.Readers
 
             SetCenter();
 
-            // May want to throw an invalid state exception if cropping fails
+            // If unable to segment, then the reader should return a null frame
             segmented = Segment();
 
             if (segmented)
@@ -118,6 +118,8 @@ namespace KSIM.Readers
             double zStart = posZ - CubeSizeZ / 2.0,
                    zEnd = posZ + CubeSizeZ / 2.0;
 
+            // The below logic relies on the fact that we have sane values for posX and posY
+            // If those are outside the actual frame, this will probably not work properly
             int xStartInFrame = xStart >= 0 ? xStart : 0,
                 xEndInFrame = xEnd <= Width ? xEnd : Width,
 
@@ -219,6 +221,8 @@ namespace KSIM.Readers
                     // No part of virtual frame is below the boundary
                     append_rows = 0;
 
+                // The below logic relies on the fact that we have sane values for posX and posY
+                // If those are outside the actual frame, this will probably not work properly
                 int xStartInFrame = xStart >= 0 ? xStart : 0,
                     xEndInFrame = xEnd <= Width ? xEnd : Width,
 

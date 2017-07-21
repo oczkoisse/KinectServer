@@ -53,9 +53,9 @@ namespace KSIM.Readers
 
         protected int IndexIntoDepthData(int x, int y)
         {
-            int index = y * Width + x;
-            if (index >= 0 && index < depthData.Length)
-                return index;
+            // Need to check the boundaries of the actual frame to be sure we are returning a valid index
+            if (x >= 0 && x < Width && y >= 0 && y < Height)
+                return y * Width + x;
             else
                 return -1;
         }
