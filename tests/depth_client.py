@@ -95,7 +95,7 @@ if __name__ == '__main__':
         avg_frame_time += (t_end - t_begin)
         timestamp, frame_type, width, height, depth_data = decode_frame(f)
         print timestamp, frame_type, width, height
-        do_plot = False
+        do_plot = True if len(sys.argv) > 1 and sys.argv[1] == '--plot' else False
         
         if do_plot and i % 20 == 0:
             image = np.array(depth_data).reshape((height, width))
