@@ -20,11 +20,7 @@ namespace KSIM.Readers
 
             if (originalFrame != null)
             {
-                var cbf = new ClosestBodyFrame(originalFrame);
-                if (cbf.Engaged)
-                    return cbf;
-                else
-                    cbf.Dispose();
+                return new ClosestBodyFrame(originalFrame);
             }
             
             return null;

@@ -53,7 +53,7 @@ def decode_frame(raw_frame):
     # Unpack the raw frame into individual pieces of data as a tuple
     frame_pieces = struct.unpack(endianness + (frame_format * (1 if engaged else 0)), raw_frame[struct.calcsize(header_format):])
     
-    decoded = (timestamp, frame_type, tracked_body_count) + frame_pieces
+    decoded = (timestamp, frame_type, tracked_body_count, engaged) + frame_pieces
 
     return decoded
 
@@ -84,8 +84,8 @@ if __name__ == '__main__':
     while True:
         try:
             f = recv_skeleton_frame(s)
-            timestamp, frame_type, tracked_body_count = decode_frame(f)[:3]
-            print timestamp, frame_type, tracked_body_count
+            timestamp, frame_type, tracked_body_count, engaged = decode_frame(f)[:4]
+            print timestamp, frame_type, tracked_body_count, 'Engaged' if engaged else 'Not Engaged'
         except:
             s.close()
             break
