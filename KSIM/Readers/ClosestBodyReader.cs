@@ -143,6 +143,9 @@ namespace KSIM.Readers
                     trackedCount++;
                 }
             }
+            // Enagaged implies BodyFound 
+            Debug.Assert(!Engaged || BodyFound);
+
             //Debug.WriteLine("Number of tracked bodies: {0}", trackedCount);
         }
 
