@@ -53,7 +53,8 @@ def decode_frame(raw_frame):
     return (timestamp, frame_type, stride, width, height, list(color_data))
 
 def format_as_image(raw_image, width, height):
-    image_as_pixels = np.array([ raw_image[i:i+4] for i in range(0, len(raw_image), 4)] , dtype=np.float)
+    # Convert to RGBA from BGRA
+    image_as_pixels = np.array([ (raw_image[i+2], raw_image[i+1], raw_image[i], raw_image[i+3]) for i in range(0, len(raw_image), 4)] , dtype=np.float)
     image_as_pixels /= 255.0
     
     return image_as_pixels.reshape((height, width, 4))
@@ -85,7 +86,7 @@ if __name__ == '__main__':
     i = 0
     avg_frame_time = 0.0
     do_plot = True if len(sys.argv) > 1 and sys.argv[1] == '--plot' else False
-
+    
     while True:
         try:
             t_begin = time.time()
@@ -100,11 +101,11 @@ if __name__ == '__main__':
         print timestamp, frame_type, stride, width, height
 
         if do_plot and i % 20 == 0:
-            image = format_as_image(color_data, width, height)
-            print image[0,0]
-            im = plt.imshow(image)
+            img = format_as_image(color_data, width, height)
+            print img[0,0]
+            plt.imshow(img)
             plt.show()
-
+            
         print "\n\n"
         i += 1
 
