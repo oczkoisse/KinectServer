@@ -69,7 +69,8 @@ namespace KSIM.Readers
         protected int xStart = 0, xEnd = 0, yStart = 0, yEnd = 0;
 
         // Correspond to the point w.r.t. which the virtual frame is computed
-        protected float posX = 0.0f, posY = 0.0f;
+        // By default, an invalid value so that Segment() returns false
+        protected float posX = -1.0f, posY = -1.0f;
 
         private ushort posZ = 0;
 
@@ -166,107 +167,109 @@ namespace KSIM.Readers
                 writer.Write(1 << (int)Type);
 
                 Debug.Write(String.Format("{0} x {1}\n", SegmentedWidth, SegmentedHeight));
-                
-                writer.Write(SegmentedWidth);
-                writer.Write(SegmentedHeight);
+
+                writer.Write(Segmented ? SegmentedWidth : 0);
+                writer.Write(Segmented ? SegmentedHeight : 0);
 
                 // Position of hand in the segmented frame
-                writer.Write(posX - xStart);
-                writer.Write(posY - yStart);
+                writer.Write(Segmented ? posX - xStart : -1.0f);
+                writer.Write(Segmented ? posY - yStart : -1.0f);
 
-                // Write the segmented data using the boundaries determined by Segment()
-                int prepend_zeros = 0, append_zeros = 0, prepend_rows = 0, append_rows = 0;
-
-                // For the left boundary of the actual frame
-                if (xEnd < 0)
-                    // The virtual frame is completely to the left of the boundary
-                    prepend_zeros = xEnd - xStart;
-                else if (xStart < 0)
-                    // At least some part of virtual frame is to the left of the boundary
-                    prepend_zeros = -xStart;
-                else
-                    // No part of virtual frame is to the left of the boundary
-                    prepend_zeros = 0;
-
-                // For the right boundary of the actual frame
-                if (xStart >= Width)
-                    // The virtual frame is completely to the right of the boundary
-                    append_zeros = xEnd - xStart;
-                else if (xEnd > Width)
-                    // At least some part of virtual frame is to the right of the boundary
-                    append_zeros = xEnd - Width;
-                else
-                    // No part of virtual frame is to the right of the boundary 
-                    append_zeros = 0;
-
-                // For the top boundary of the actual frame
-                if (yEnd < 0)
-                    // The virtual frame is completely above the boundary
-                    prepend_rows = yEnd - yStart;
-                else if (yStart < 0)
-                    // At least some part of virtual frame is above the boundary
-                    prepend_rows = -yStart;
-                else
-                    // No part of virtual frame is above the boundary
-                    prepend_rows = 0;
-
-                // For the bottom boundary of the actual frame
-                if (yStart >= Height)
-                    // The virtual frame is completely below the boundary
-                    append_rows = yEnd - yStart;
-                else if (yEnd > Height)
-                    // At least some part of virtual frame is below the boundary
-                    append_rows = yEnd - Height;
-                else
-                    // No part of virtual frame is below the boundary
-                    append_rows = 0;
-
-                // The below logic relies on the fact that we have sane values for posX and posY
-                // If those are outside the actual frame, this will probably not work properly
-                int xStartInFrame = xStart >= 0 ? xStart : 0,
-                    xEndInFrame = xEnd <= Width ? xEnd : Width,
-
-                    yStartInFrame = yStart >= 0 ? yStart : 0,
-                    yEndInFrame = yEnd <= Height ? yEnd : Height;
-
-
-                Debug.Write(String.Format("Virtual frame: ({0}, {1}) and ({2}, {3})\n", xStart, yStart, xEnd, yEnd));
-                
-                // Zero rows to account for some part of the virtual frame being above the top boundary of actual frame
-                for (int i = 0; i < prepend_rows; i++)
-                    for (int j = 0; j < SegmentedWidth; j++)
-                        writer.Write((ushort)0);
-
-                int xStartInBuffer = IndexIntoDepthData(xStartInFrame, yStartInFrame),
-                    xEndInBuffer = IndexIntoDepthData(xEndInFrame, yStartInFrame);
-
-                Debug.Assert(SegmentedHeight == (prepend_rows + (yEndInFrame - yStartInFrame) + append_rows), String.Format("Mismatch in segmented height: {0} = {1} + ({2} - {3}) + {4}\n", SegmentedHeight, prepend_rows, yEndInFrame, yStartInFrame, append_rows));
-
-                Debug.Assert(SegmentedWidth == (prepend_zeros + (xEndInBuffer - xStartInBuffer) + append_zeros), String.Format("Mismatch in segmented width: {0} = {1} + ({2} - {3}) + {4}\n", SegmentedWidth, prepend_zeros, xEndInBuffer, xStartInBuffer, append_zeros));
-
-                for (int i = 0; i < yEndInFrame - yStartInFrame; i++)
+                if (Segmented)
                 {
-                    // Zero columns to accound for some part of the virtual frame being to the left of actual frame
-                    for (int j = 0; j < prepend_zeros; j++)
-                        writer.Write((ushort)0);
-                    
-                    for (int j = xStartInBuffer; j < xEndInBuffer; j++)
-                        writer.Write(depthData[j]);
-                    
-                    // Go to next row in actual frame
-                    xStartInBuffer += Width;
-                    xEndInBuffer += Width;
+                    // Write the segmented data using the boundaries determined by Segment()
+                    int prepend_zeros = 0, append_zeros = 0, prepend_rows = 0, append_rows = 0;
 
-                    // Zero columns to accound for some part of the virtual frame being to the right of actual frame
-                    for (int j = 0; j < append_zeros; j++)
-                        writer.Write((ushort)0);
+                    // For the left boundary of the actual frame
+                    if (xEnd < 0)
+                        // The virtual frame is completely to the left of the boundary
+                        prepend_zeros = xEnd - xStart;
+                    else if (xStart < 0)
+                        // At least some part of virtual frame is to the left of the boundary
+                        prepend_zeros = -xStart;
+                    else
+                        // No part of virtual frame is to the left of the boundary
+                        prepend_zeros = 0;
+
+                    // For the right boundary of the actual frame
+                    if (xStart >= Width)
+                        // The virtual frame is completely to the right of the boundary
+                        append_zeros = xEnd - xStart;
+                    else if (xEnd > Width)
+                        // At least some part of virtual frame is to the right of the boundary
+                        append_zeros = xEnd - Width;
+                    else
+                        // No part of virtual frame is to the right of the boundary 
+                        append_zeros = 0;
+
+                    // For the top boundary of the actual frame
+                    if (yEnd < 0)
+                        // The virtual frame is completely above the boundary
+                        prepend_rows = yEnd - yStart;
+                    else if (yStart < 0)
+                        // At least some part of virtual frame is above the boundary
+                        prepend_rows = -yStart;
+                    else
+                        // No part of virtual frame is above the boundary
+                        prepend_rows = 0;
+
+                    // For the bottom boundary of the actual frame
+                    if (yStart >= Height)
+                        // The virtual frame is completely below the boundary
+                        append_rows = yEnd - yStart;
+                    else if (yEnd > Height)
+                        // At least some part of virtual frame is below the boundary
+                        append_rows = yEnd - Height;
+                    else
+                        // No part of virtual frame is below the boundary
+                        append_rows = 0;
+
+                    // The below logic relies on the fact that we have sane values for posX and posY
+                    // If those are outside the actual frame, this will probably not work properly
+                    int xStartInFrame = xStart >= 0 ? xStart : 0,
+                        xEndInFrame = xEnd <= Width ? xEnd : Width,
+
+                        yStartInFrame = yStart >= 0 ? yStart : 0,
+                        yEndInFrame = yEnd <= Height ? yEnd : Height;
+
+
+                    Debug.Write(String.Format("Virtual frame: ({0}, {1}) and ({2}, {3})\n", xStart, yStart, xEnd, yEnd));
+
+                    // Zero rows to account for some part of the virtual frame being above the top boundary of actual frame
+                    for (int i = 0; i < prepend_rows; i++)
+                        for (int j = 0; j < SegmentedWidth; j++)
+                            writer.Write((ushort)0);
+
+                    int xStartInBuffer = IndexIntoDepthData(xStartInFrame, yStartInFrame),
+                        xEndInBuffer = IndexIntoDepthData(xEndInFrame, yStartInFrame);
+
+                    Debug.Assert(SegmentedHeight == (prepend_rows + (yEndInFrame - yStartInFrame) + append_rows), String.Format("Mismatch in segmented height: {0} = {1} + ({2} - {3}) + {4}\n", SegmentedHeight, prepend_rows, yEndInFrame, yStartInFrame, append_rows));
+
+                    Debug.Assert(SegmentedWidth == (prepend_zeros + (xEndInBuffer - xStartInBuffer) + append_zeros), String.Format("Mismatch in segmented width: {0} = {1} + ({2} - {3}) + {4}\n", SegmentedWidth, prepend_zeros, xEndInBuffer, xStartInBuffer, append_zeros));
+
+                    for (int i = 0; i < yEndInFrame - yStartInFrame; i++)
+                    {
+                        // Zero columns to accound for some part of the virtual frame being to the left of actual frame
+                        for (int j = 0; j < prepend_zeros; j++)
+                            writer.Write((ushort)0);
+
+                        for (int j = xStartInBuffer; j < xEndInBuffer; j++)
+                            writer.Write(depthData[j]);
+
+                        // Go to next row in actual frame
+                        xStartInBuffer += Width;
+                        xEndInBuffer += Width;
+
+                        // Zero columns to accound for some part of the virtual frame being to the right of actual frame
+                        for (int j = 0; j < append_zeros; j++)
+                            writer.Write((ushort)0);
+                    }
+
+                    // Zero rows to account for some part of the virtual frame being below the bottom boundary of actual frame
+                    for (int i = 0; i < append_rows; i++)
+                        for (int j = 0; j < SegmentedWidth; j++)
+                            writer.Write((ushort)0);
                 }
-
-                // Zero rows to account for some part of the virtual frame being below the bottom boundary of actual frame
-                for (int i = 0; i < append_rows; i++)
-                    for (int j = 0; j < SegmentedWidth; j++)
-                        writer.Write((ushort)0);
-                
                 // Rewind back to write the load size in the first 4 bytes
                 loadSize = (int)writer.Seek(0, SeekOrigin.Current) - sizeof(int);
                 writer.Seek(0, SeekOrigin.Begin);

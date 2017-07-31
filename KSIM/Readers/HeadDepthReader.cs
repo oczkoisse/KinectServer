@@ -18,11 +18,7 @@ namespace KSIM.Readers
 
             if (cbf != null && originalDepthFrame != null)
             {
-                var hdf = new HeadDepthFrame(originalDepthFrame, cbf);
-                if (hdf.Segmented)
-                    return hdf;
-                else
-                    hdf.Dispose();
+                return new HeadDepthFrame(originalDepthFrame, cbf);
             }
             else
             {
@@ -30,8 +26,8 @@ namespace KSIM.Readers
                     cbf.Dispose();
                 if (originalDepthFrame != null)
                     originalDepthFrame.Dispose();
+                return null;
             }
-            return null;
         }
     }
 
@@ -44,10 +40,13 @@ namespace KSIM.Readers
 
         protected override void SetCenter()
         {
-            var pos = UnderlyingClosestBodyFrame.Joints[JointType.Head].Position;
-            DepthSpacePoint p = UnderlyingDepthFrame.DepthFrameSource.KinectSensor.CoordinateMapper.MapCameraPointToDepthSpace(pos);
-            posX = p.X;
-            posY = p.Y;
+            if (UnderlyingClosestBodyFrame.Engaged)
+            {
+                var pos = UnderlyingClosestBodyFrame.Joints[JointType.Head].Position;
+                DepthSpacePoint p = UnderlyingDepthFrame.DepthFrameSource.KinectSensor.CoordinateMapper.MapCameraPointToDepthSpace(pos);
+                posX = p.X;
+                posY = p.Y;
+            }
         }
 
         private bool disposed = false;
