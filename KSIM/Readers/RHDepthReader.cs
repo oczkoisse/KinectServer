@@ -26,8 +26,8 @@ namespace KSIM.Readers
                     cbf.Dispose();
                 if (originalDepthFrame != null)
                     originalDepthFrame.Dispose();
+                return null;
             }
-            return null;
         }
     }
 
