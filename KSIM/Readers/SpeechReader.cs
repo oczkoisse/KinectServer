@@ -14,7 +14,7 @@ namespace KSIM.Readers
     {
         public override Frame Read(MultiSourceFrame f)
         {
-            throw new NotImplementedException("AudioReader cannot read from a MultiSourceFrame. Pass RecognitionResult instead.");
+            throw new NotImplementedException("SpeechReader cannot read from a MultiSourceFrame. Pass RecognitionResult instead.");
         }
 
         public override Frame Read(RecognitionResult r)

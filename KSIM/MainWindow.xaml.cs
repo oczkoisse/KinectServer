@@ -396,8 +396,6 @@ namespace KSIM
                         {
                             Trace.WriteLine(String.Format("Client {0} disconnected", client.Client.RemoteEndPoint.ToString()));
                             clientsToBeDisconnected.Add(client);
-                            // No need to send other frames subscribed by the client since it is already disconnected
-                            break;
                         }
                     }
 
@@ -441,8 +439,6 @@ namespace KSIM
                         {
                             Trace.WriteLine(String.Format("Client {0} disconnected", client.Client.RemoteEndPoint.ToString()));
                             clientsToBeDisconnected.Add(client);
-                            // No need to send other frames subscribed by the client since it is already disconnected
-                            break;
                         }
                     }
 
