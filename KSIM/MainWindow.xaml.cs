@@ -52,11 +52,6 @@ namespace KSIM
         private List<TcpClient> connectedAudioClients = new List<TcpClient>();
 
         /// <summary>
-        /// A dictionary for holding clients subscribed to Speech stream. These clients cannot be subscribed to any other stream.
-        /// </summary>
-        private List<TcpClient> connectedSpeechClients = new List<TcpClient>();
-
-        /// <summary>
         /// Reference to the Kinect sensor. Needed to Close() at the application exit.
         /// </summary>
         private KinectSensor sensor = null;
@@ -145,10 +140,10 @@ namespace KSIM
             // If there are one or more valid stream requests
             if (activeFrames.Count >= 1)
             {
-                // If the request does not involve either Audio or Speech
-                if (!activeFrames.Contains(FrameType.Audio) && !activeFrames.Contains(FrameType.Speech))
+                // If the request does not involve Audio
+                if (!activeFrames.Contains(FrameType.Audio))
                 {
-                    // Add the client to list of connected clients other than speech and audio clients
+                    // Add the client to list of connected clients other than audio clients
                     lock (connectedClients)
                     {
                         connectedClients.Add(c, activeFrames);
@@ -157,35 +152,20 @@ namespace KSIM
                             Trace.WriteLine((int)ft);
                     }
                 }
-                // If the request contains only 1 stream type, which consists either Audio or Speech
-                else if (activeFrames.Count == 1)
+                // If the request contains only 1 stream type which is Audio
+                else if (activeFrames.Count == 1 && activeFrames[0] == FrameType.Audio)
                 {
-                    // If Audio, add to the list of connected clients for Audio
-                    if (activeFrames[0] == FrameType.Audio)
+                    lock (connectedAudioClients)
                     {
-                        lock (connectedAudioClients)
-                        {
-                            connectedAudioClients.Add(c);
-                            Trace.WriteLine(String.Format("Accepted connection from {0}", c.Client.RemoteEndPoint.ToString()));
-                            Trace.WriteLine((int)activeFrames[0]);
-                        }
-                    }
-                    // If Speech, add to the list of connected clients for Speech
-                    // Acutally, don't need the following check
-                    else if (activeFrames[0] == FrameType.Speech)
-                    {
-                        lock (connectedSpeechClients)
-                        {
-                            connectedSpeechClients.Add(c);
-                            Trace.WriteLine(String.Format("Accepted connection from {0}", c.Client.RemoteEndPoint.ToString()));
-                            Trace.WriteLine((int)activeFrames[0]);
-                        }
+                        connectedAudioClients.Add(c);
+                        Trace.WriteLine(String.Format("Accepted connection from {0}", c.Client.RemoteEndPoint.ToString()));
+                        Trace.WriteLine((int)activeFrames[0]);
                     }
                 }
                 else
                 {
                     // Reject as an invalid stream as the stream contains a combination of Audio/Speech with other stream types
-                    Trace.WriteLine(String.Format("Rejecting client {0} because it is not possible to combine Audio/Speech stream with other streams.", c.Client.RemoteEndPoint.ToString()));
+                    Trace.WriteLine(String.Format("Rejecting client {0} because it is not possible to combine Audio stream with other streams.", c.Client.RemoteEndPoint.ToString()));
                     c.Close();
                 }
             }
@@ -349,7 +329,7 @@ namespace KSIM
                 // If it turns out that all connected clients have in fact disconnected
                 // then revert back to previous timestamp
                 if (clientsToBeDisconnected.Count == connectedClients.Count)
-                    Interlocked.Exchange(ref lastTimestamp, prevTimestamp);
+                    LastTimestamp = prevTimestamp;
 
                 // Remove clients that are already disconnected
                 foreach (var client in clientsToBeDisconnected)
@@ -412,44 +392,8 @@ namespace KSIM
         private void Reader_SpeechRecognized(object sender, SpeechRecognizedEventArgs e)
         {
             var result = e.Result;
-
-            var f = (SpeechFrame)KSIM.Readers.FrameType.Speech.GetReader().Read(result);
-            if (f == null)
-                return;
-            
-            f.Timestamp = LastTimestamp;
-
-            List<TcpClient> clientsToBeDisconnected = new List<TcpClient>();
-
-            using (var ms = new MemoryStream())
-            {
-                f.Serialize(ms);
-                f.Dispose();
-                // Cache
-                byte[] dataToSend = ms.ToArray();
-                lock (connectedSpeechClients)
-                {
-                    foreach (var client in connectedSpeechClients)
-                    {
-                        try
-                        {
-                            client.GetStream().Write(dataToSend, 0, dataToSend.Length);
-                        }
-                        catch (IOException)
-                        {
-                            Trace.WriteLine(String.Format("Client {0} disconnected", client.Client.RemoteEndPoint.ToString()));
-                            clientsToBeDisconnected.Add(client);
-                        }
-                    }
-
-                    // Remove clients that are already disconnected
-                    foreach (var client in clientsToBeDisconnected)
-                    {
-                        client.Close();
-                        connectedSpeechClients.Remove(client);
-                    }
-                }
-            }
+            var sr = (SpeechReader)KSIM.Readers.FrameType.Speech.GetReader();
+            sr.Store(result);
         }
 
         /// <summary>
@@ -580,11 +524,6 @@ namespace KSIM
             lock(connectedAudioClients)
             {
                 foreach (var client in connectedAudioClients)
-                    client.Close();
-            }
-            lock (connectedSpeechClients)
-            {
-                foreach (var client in connectedSpeechClients)
                     client.Close();
             }
             // Stop listening too

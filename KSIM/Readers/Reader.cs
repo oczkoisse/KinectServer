@@ -38,7 +38,7 @@ namespace KSIM.Readers
         private static HeadDepthReader hdr = new HeadDepthReader();
         private static AudioReader ar = new AudioReader();
         private static ColorReader cr = new ColorReader();
-        private static SpeechReader sr = new SpeechReader();
+        private static SpeechReader sr = SpeechReader.Instance();
 
         public static Reader GetReader(this FrameType ft)
         {

@@ -6,26 +6,43 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Kinect;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 using Microsoft.Speech.Recognition;
 
 namespace KSIM.Readers
 {
     class SpeechReader : Reader
     {
-        public override Frame Read(MultiSourceFrame f)
+        // Singleton for SpeechReader
+        private static SpeechReader instance = new SpeechReader();
+
+        private static ConcurrentQueue<SpeechFrame> listSpeechFrame = new ConcurrentQueue<SpeechFrame>(); 
+        
+        private SpeechReader()
         {
-            throw new NotImplementedException("SpeechReader cannot read from a MultiSourceFrame. Pass RecognitionResult instead.");
+
         }
 
-        public override Frame Read(RecognitionResult r)
+        public static SpeechReader Instance()
         {
-            var sf = new SpeechFrame(r);
-            if (sf != null && sf.HasData)
-                return sf;
-            else
-                sf.Dispose();
+            return instance;
+        }
 
-            return null;
+        public override Frame Read(MultiSourceFrame f)
+        {
+            // Thread safe to call Read from multiple threads
+            SpeechFrame outFrame = new SpeechFrame(), tempFrame;
+            
+            while(listSpeechFrame.TryDequeue(out tempFrame))
+            {
+                outFrame += tempFrame;
+            }
+            return outFrame;
+        }
+
+        public void Store(RecognitionResult r)
+        {
+            listSpeechFrame.Enqueue(new SpeechFrame(r));
         }
     }
 
@@ -33,13 +50,12 @@ namespace KSIM.Readers
     {
         private bool disposed = false;
 
-        private bool hasData = false;
-        public bool HasData
-        {
-            get { return hasData; }
-        }
+        private string command = "";
 
-        private string command;
+        private bool HasData
+        {
+            get { return command.Length > 0; }
+        }
 
         public SpeechFrame(RecognitionResult r)
         {
@@ -49,8 +65,23 @@ namespace KSIM.Readers
             {
                 command = r.Semantics.Value.ToString();
                 Debug.Write(command + "\n");
-                hasData = true;
             }
+        }
+
+        public SpeechFrame()
+        {
+        }
+
+        public static SpeechFrame operator +(SpeechFrame a, SpeechFrame b)
+        {
+            SpeechFrame a_plus_b = new SpeechFrame();
+            if (a.HasData && b.HasData)
+                a_plus_b.command = a.command + ", " + b.command;
+            else if (a.HasData)
+                a_plus_b.command = a.command;
+            else
+                a_plus_b.command = b.command;
+            return a_plus_b;
         }
            
         public override void Serialize(Stream s)
