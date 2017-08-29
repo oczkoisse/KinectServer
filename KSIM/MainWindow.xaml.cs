@@ -295,12 +295,6 @@ namespace KSIM
                     }
                 }
 
-                // Safely update last known timestamp
-                // Optimistically update LastTimestamp to be ready to be written to clients
-                if(connectedClients.Count > 0)
-                    LastTimestamp = curTimestamp;
-
-
                 // We are ensured that all the subscribed frames have already been cached
                 foreach (var client in connectedClients.Keys)
                 {
@@ -326,9 +320,9 @@ namespace KSIM
                     }
                 }
 
-                // If it turns out that all connected clients have in fact disconnected
-                // then revert back to previous timestamp
-                if (clientsToBeDisconnected.Count == connectedClients.Count)
+                // If the current timestamp data has been sent to atleast one client
+                // then update future timestamps to be used by Audio stream
+                if (clientsToBeDisconnected.Count < connectedClients.Count)
                     LastTimestamp = prevTimestamp;
 
                 // Remove clients that are already disconnected
