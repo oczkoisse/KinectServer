@@ -70,6 +70,7 @@ namespace KSIM.Readers
 
         public SpeechFrame()
         {
+            this.Type = FrameType.Speech;
         }
 
         public static SpeechFrame operator +(SpeechFrame a, SpeechFrame b)
