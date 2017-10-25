@@ -456,27 +456,67 @@ namespace KSIM
                         this.speechEngine = new SpeechRecognitionEngine(ri.Id);
 
                         var utterances = new Choices();
+                        // Directions
                         utterances.Add(new SemanticResultValue("left", "LEFT"));
                         utterances.Add(new SemanticResultValue("to the left", "LEFT"));
                         utterances.Add(new SemanticResultValue("to my left", "LEFT"));
-                        utterances.Add(new SemanticResultValue("to your right", "LEFT"));
 
                         utterances.Add(new SemanticResultValue("right", "RIGHT"));
                         utterances.Add(new SemanticResultValue("to the right", "RIGHT"));
                         utterances.Add(new SemanticResultValue("to my right", "RIGHT"));
-                        utterances.Add(new SemanticResultValue("to your left", "RIGHT"));
+
+                        utterances.Add(new SemanticResultValue("up", "UP"));
+                        utterances.Add(new SemanticResultValue("down", "DOWN"));
+
+                        utterances.Add(new SemanticResultValue("forward", "FORWARD"));
+                        utterances.Add(new SemanticResultValue("back", "BACK"));
+
+                        // Actions
+                        utterances.Add(new SemanticResultValue("grab", "GRAB"));
+                        utterances.Add(new SemanticResultValue("lift", "LIFT"));
+                        utterances.Add(new SemanticResultValue("push", "PUSH"));
+                        utterances.Add(new SemanticResultValue("put", "PUT"));
 
                         utterances.Add(new SemanticResultValue("yes", "YES"));
                         utterances.Add(new SemanticResultValue("yeah", "YES"));
 
                         utterances.Add(new SemanticResultValue("no", "NO"));
 
+                        // Colors
                         utterances.Add(new SemanticResultValue("red", "RED"));
                         utterances.Add(new SemanticResultValue("the red one", "RED"));
                         utterances.Add(new SemanticResultValue("blue", "BLUE"));
                         utterances.Add(new SemanticResultValue("the blue one", "BLUE"));
                         utterances.Add(new SemanticResultValue("green", "GREEN"));
                         utterances.Add(new SemanticResultValue("the green one", "GREEN"));
+                        utterances.Add(new SemanticResultValue("yellow", "YELLOW"));
+                        utterances.Add(new SemanticResultValue("the yellow one", "YELLOW"));
+                        utterances.Add(new SemanticResultValue("orange", "ORANGE"));
+                        utterances.Add(new SemanticResultValue("the orange one", "ORANGE"));
+                        utterances.Add(new SemanticResultValue("black", "BLACK"));
+                        utterances.Add(new SemanticResultValue("the black one", "BLACK"));
+                        utterances.Add(new SemanticResultValue("purple", "PURPLE"));
+                        utterances.Add(new SemanticResultValue("the purple one", "PURPLE"));
+                        utterances.Add(new SemanticResultValue("white", "WHITE"));
+                        utterances.Add(new SemanticResultValue("the white one", "WHITE"));
+                        utterances.Add(new SemanticResultValue("pink", "PINK"));
+                        utterances.Add(new SemanticResultValue("the pink one", "PINK"));
+
+                        // Properties
+                        utterances.Add(new SemanticResultValue("big", "BIG"));
+                        utterances.Add(new SemanticResultValue("the big one", "BIG"));
+                        utterances.Add(new SemanticResultValue("small", "SMALL"));
+                        utterances.Add(new SemanticResultValue("the small one", "SMALL"));
+
+                        // Demonstratives
+                        utterances.Add(new SemanticResultValue("this", "THIS"));
+                        utterances.Add(new SemanticResultValue("this one", "THIS"));
+
+                        utterances.Add(new SemanticResultValue("that", "THAT"));
+                        utterances.Add(new SemanticResultValue("that one", "THAT"));
+
+                        utterances.Add(new SemanticResultValue("there", "THERE"));
+
 
                         var gb = new GrammarBuilder { Culture = ri.Culture };
                         gb.Append(utterances);
