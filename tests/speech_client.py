@@ -81,8 +81,9 @@ if __name__ == '__main__':
         except:
             break
         timestamp, frame_type, command = decode_frame(f)
-        print timestamp, frame_type, command
-        print "\n\n"
+        if command != "":
+            print timestamp, frame_type, command
+            print "\n\n"
 
 
     s.close()

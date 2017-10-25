@@ -485,8 +485,6 @@ namespace KSIM
                         // Colors
                         utterances.Add(new SemanticResultValue("red", "RED"));
                         utterances.Add(new SemanticResultValue("the red one", "RED"));
-                        utterances.Add(new SemanticResultValue("blue", "BLUE"));
-                        utterances.Add(new SemanticResultValue("the blue one", "BLUE"));
                         utterances.Add(new SemanticResultValue("green", "GREEN"));
                         utterances.Add(new SemanticResultValue("the green one", "GREEN"));
                         utterances.Add(new SemanticResultValue("yellow", "YELLOW"));
@@ -499,8 +497,6 @@ namespace KSIM
                         utterances.Add(new SemanticResultValue("the purple one", "PURPLE"));
                         utterances.Add(new SemanticResultValue("white", "WHITE"));
                         utterances.Add(new SemanticResultValue("the white one", "WHITE"));
-                        utterances.Add(new SemanticResultValue("pink", "PINK"));
-                        utterances.Add(new SemanticResultValue("the pink one", "PINK"));
 
                         // Properties
                         utterances.Add(new SemanticResultValue("big", "BIG"));
