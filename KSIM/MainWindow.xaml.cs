@@ -513,6 +513,9 @@ namespace KSIM
 
                         utterances.Add(new SemanticResultValue("there", "THERE"));
 
+                        // Surprise
+                        utterances.Add(new SemanticResultValue("what", "WHAT"));
+
 
                         var gb = new GrammarBuilder { Culture = ri.Culture };
                         gb.Append(utterances);
