@@ -22,6 +22,8 @@ using System.Windows.Shapes;
 using System.Threading;
 using Microsoft.Speech.AudioFormat;
 using Microsoft.Speech.Recognition;
+using Microsoft.Speech.Synthesis;
+using System.Globalization;
 
 namespace KSIM
 {
@@ -37,6 +39,13 @@ namespace KSIM
         /// </summary>
         private const int PORT = 8000;
 
+        private static bool listenFromKinect = true;
+
+        /// <summary>
+        /// Reference to the Kinect sensor. Needed to Close() at the application exit.
+        /// </summary>
+        private static KinectSensor sensor;
+
         /// <summary>
         /// The server object to listen for incoming client requests
         /// </summary>
@@ -51,10 +60,7 @@ namespace KSIM
         /// </summary>
         private List<TcpClient> connectedAudioClients = new List<TcpClient>();
 
-        /// <summary>
-        /// Reference to the Kinect sensor. Needed to Close() at the application exit.
-        /// </summary>
-        private KinectSensor sensor = null;
+        
 
         /// <summary>
         /// Reference to the MultiSourceFrameReader reader got from the Kinect sensor. Needed to Dispose() at the application exit.
@@ -76,7 +82,7 @@ namespace KSIM
         /// <summary>
         /// Reference to the SpeechRecognitionEngine. Needed to stop async recogntion at the application exit.
         /// </summary>
-        private SpeechRecognitionEngine speechEngine;
+        private static SpeechRecognitionEngine speechEngine;
 
         // To keep sync between MultiSouceFrame, AudioBeamFrame and Speech stream
         // Note that we cannot ensure perfect sync between AudioBeamFrame and Speech stream
@@ -248,6 +254,24 @@ namespace KSIM
         /// </summary>
         public MainWindow()
         {
+            String[] args = Environment.GetCommandLineArgs();
+            if (args.Length >= 2 && args[0] == "--listen")
+            {
+                switch(args[1].ToLower())
+                {
+                    default:
+                    case "kinect":
+                    case "k":
+                        listenFromKinect = true;
+                        break;
+                
+                    case "microphone":
+                    case "m":
+                        listenFromKinect = false;
+                        break;
+                }
+            }
+                
             LastTimestamp = Int64.MinValue;
             bool success = InitializeKinect();
             if (success)
@@ -427,122 +451,153 @@ namespace KSIM
 
         private bool InitializeKinect()
         {
-            var sensor = KinectSensor.GetDefault();
+            sensor = KinectSensor.GetDefault();
             if (sensor != null)
             {
-                var msfr = sensor.OpenMultiSourceFrameReader(FrameSourceTypes.Depth | FrameSourceTypes.Color | FrameSourceTypes.Body);
+                this.multiSourceFrameReader = sensor.OpenMultiSourceFrameReader(FrameSourceTypes.Depth | FrameSourceTypes.Color | FrameSourceTypes.Body);
 
-                var beams = sensor.AudioSource.AudioBeams;
-                if (beams != null && beams.Count > 0)
+                bool audioInitialized = InitializeKinectAudio();
+                if (!audioInitialized && listenFromKinect)
                 {
-                    // Beam angle is in Radians theroretically between -1.58 to 1.58 (+- 90 degrees)
-                    // Practically, Kinect is limited to -0.87 to 0.87 (+- 90 degrees) with 5 degree increments
-                    // Note that setting beam mode and beam angle will only work if the
-                    // application window is in the foreground.
-                    // Furthermore, setting these values is an asynchronous operation --
-                    // it may take a short period of time for the beam to adjust.
-                    beams[0].AudioBeamMode = AudioBeamMode.Manual;
-                    beams[0].BeamAngle = 0.0f;
-                    
-                    var afr = sensor.AudioSource.OpenReader();
-                    
-                    RecognizerInfo ri = TryGetKinectRecognizer();
-                    if (null != ri)
-                    {
-                        this.audioStream = new Pcm16Stream(beams[0].OpenInputStream());
-                        // let the underlying stream know speech is going active
-                        this.audioStream.SpeechActive = true;
-
-                        this.speechEngine = new SpeechRecognitionEngine(ri.Id);
-
-                        var utterances = new Choices();
-                        // Directions
-                        utterances.Add(new SemanticResultValue("left", "LEFT"));
-                        utterances.Add(new SemanticResultValue("to the left", "LEFT"));
-                        utterances.Add(new SemanticResultValue("to my left", "LEFT"));
-
-                        utterances.Add(new SemanticResultValue("right", "RIGHT"));
-                        utterances.Add(new SemanticResultValue("to the right", "RIGHT"));
-                        utterances.Add(new SemanticResultValue("to my right", "RIGHT"));
-
-                        utterances.Add(new SemanticResultValue("up", "UP"));
-                        utterances.Add(new SemanticResultValue("down", "DOWN"));
-
-                        utterances.Add(new SemanticResultValue("forward", "FORWARD"));
-                        utterances.Add(new SemanticResultValue("back", "BACK"));
-
-                        // Actions
-                        utterances.Add(new SemanticResultValue("grab", "GRAB"));
-                        utterances.Add(new SemanticResultValue("lift", "LIFT"));
-                        utterances.Add(new SemanticResultValue("push", "PUSH"));
-                        utterances.Add(new SemanticResultValue("put", "PUT"));
-
-                        utterances.Add(new SemanticResultValue("yes", "YES"));
-                        utterances.Add(new SemanticResultValue("yeah", "YES"));
-
-                        utterances.Add(new SemanticResultValue("no", "NO"));
-
-                        // Colors
-                        utterances.Add(new SemanticResultValue("red", "RED"));
-                        utterances.Add(new SemanticResultValue("the red one", "RED"));
-                        utterances.Add(new SemanticResultValue("green", "GREEN"));
-                        utterances.Add(new SemanticResultValue("the green one", "GREEN"));
-                        utterances.Add(new SemanticResultValue("yellow", "YELLOW"));
-                        utterances.Add(new SemanticResultValue("the yellow one", "YELLOW"));
-                        utterances.Add(new SemanticResultValue("orange", "ORANGE"));
-                        utterances.Add(new SemanticResultValue("the orange one", "ORANGE"));
-                        utterances.Add(new SemanticResultValue("black", "BLACK"));
-                        utterances.Add(new SemanticResultValue("the black one", "BLACK"));
-                        utterances.Add(new SemanticResultValue("purple", "PURPLE"));
-                        utterances.Add(new SemanticResultValue("the purple one", "PURPLE"));
-                        utterances.Add(new SemanticResultValue("white", "WHITE"));
-                        utterances.Add(new SemanticResultValue("the white one", "WHITE"));
-
-                        // Properties
-                        utterances.Add(new SemanticResultValue("big", "BIG"));
-                        utterances.Add(new SemanticResultValue("the big one", "BIG"));
-                        utterances.Add(new SemanticResultValue("small", "SMALL"));
-                        utterances.Add(new SemanticResultValue("the small one", "SMALL"));
-
-                        // Demonstratives
-                        utterances.Add(new SemanticResultValue("this", "THIS"));
-                        utterances.Add(new SemanticResultValue("this one", "THIS"));
-
-                        utterances.Add(new SemanticResultValue("that", "THAT"));
-                        utterances.Add(new SemanticResultValue("that one", "THAT"));
-
-                        utterances.Add(new SemanticResultValue("there", "THERE"));
-
-                        // Surprise
-                        utterances.Add(new SemanticResultValue("what", "WHAT"));
-
-
-                        var gb = new GrammarBuilder { Culture = ri.Culture };
-                        gb.Append(utterances);
-
-                        this.speechEngine.LoadGrammar(new Grammar(gb));
-                        
-                        this.speechEngine.SetInputToAudioStream(
-                            this.audioStream, new SpeechAudioFormatInfo(EncodingFormat.Pcm, 16000, 16, 1, 32000, 2, null));
-                        this.speechEngine.RecognizeAsync(RecognizeMode.Multiple);
-                    }
-
-                    sensor.Open();
-
-                    this.sensor = sensor;
-
-                    this.multiSourceFrameReader = msfr;
-                    multiSourceFrameReader.MultiSourceFrameArrived += Reader_MultiSourceFrameArrived;
-
-                    this.audioFrameReader = afr;
-                    audioFrameReader.FrameArrived += Reader_AudioFrameArrived;
-
-                    speechEngine.SpeechRecognized += Reader_SpeechRecognized;
-
-                    return true;
+                    throw new InvalidOperationException("Unable to initialize Kinect Audio, so can't listen from it");    
                 }
+                else
+                    InitializeSpeechEngine();
+
+                sensor.Open();
+                multiSourceFrameReader.MultiSourceFrameArrived += Reader_MultiSourceFrameArrived;
+                return true;
             }
             return false;
+        }
+
+        private bool InitializeKinectAudio()
+        {
+            this.audioFrameReader = sensor.AudioSource.OpenReader();
+            var beams = sensor.AudioSource.AudioBeams;
+            if (beams != null && beams.Count > 0)
+            {
+                // Beam angle is in Radians theroretically between -1.58 to 1.58 (+- 90 degrees)
+                // Practically, Kinect is limited to -0.87 to 0.87 (+- 90 degrees) with 5 degree increments
+                // Note that setting beam mode and beam angle will only work if the
+                // application window is in the foreground.
+                // Furthermore, setting these values is an asynchronous operation --
+                // it may take a short period of time for the beam to adjust.
+                beams[0].AudioBeamMode = AudioBeamMode.Manual;
+                beams[0].BeamAngle = 0.0f;
+
+                this.audioStream = new Pcm16Stream(beams[0].OpenInputStream());
+                // let the underlying stream know speech is going active
+                this.audioStream.SpeechActive = true;
+
+                audioFrameReader.FrameArrived += Reader_AudioFrameArrived;
+                return true;
+            }
+            return false;
+        }
+
+        private bool InitializeSpeechEngine()
+        {
+            Grammar g = null;
+            if (listenFromKinect)
+            {
+                RecognizerInfo ri = TryGetKinectRecognizer();
+                if (null != ri)
+                {
+                    speechEngine = new SpeechRecognitionEngine(ri.Id);
+                    speechEngine.SetInputToAudioStream(
+                    this.audioStream, new SpeechAudioFormatInfo(EncodingFormat.Pcm, 16000, 16, 1, 32000, 2, null));
+                    g = GetGrammars(ri.Culture);
+                }
+            }
+            else
+            {
+                CultureInfo ci = new CultureInfo("en-us");
+                if (ci != null)
+                {
+                    speechEngine = new SpeechRecognitionEngine(ci);
+                    speechEngine.SetInputToDefaultAudioDevice();
+                    g = GetGrammars(ci);
+                }
+            }
+
+            if (g != null)
+            {
+                speechEngine.LoadGrammar(g);
+                speechEngine.RecognizeAsync(RecognizeMode.Multiple);
+                speechEngine.SpeechRecognized += Reader_SpeechRecognized;
+                return true;
+            }
+            return false;
+        }
+
+        private Grammar GetGrammars(CultureInfo ci)
+        {
+            var utterances = new Choices();
+            // Directions
+            utterances.Add(new SemanticResultValue("left", "LEFT"));
+            utterances.Add(new SemanticResultValue("to the left", "LEFT"));
+            utterances.Add(new SemanticResultValue("to my left", "LEFT"));
+
+            utterances.Add(new SemanticResultValue("right", "RIGHT"));
+            utterances.Add(new SemanticResultValue("to the right", "RIGHT"));
+            utterances.Add(new SemanticResultValue("to my right", "RIGHT"));
+
+            utterances.Add(new SemanticResultValue("up", "UP"));
+            utterances.Add(new SemanticResultValue("down", "DOWN"));
+
+            utterances.Add(new SemanticResultValue("forward", "FORWARD"));
+            utterances.Add(new SemanticResultValue("back", "BACK"));
+
+            // Actions
+            utterances.Add(new SemanticResultValue("grab", "GRAB"));
+            utterances.Add(new SemanticResultValue("lift", "LIFT"));
+            utterances.Add(new SemanticResultValue("push", "PUSH"));
+            utterances.Add(new SemanticResultValue("put", "PUT"));
+
+            utterances.Add(new SemanticResultValue("yes", "YES"));
+            utterances.Add(new SemanticResultValue("yeah", "YES"));
+        
+            utterances.Add(new SemanticResultValue("no", "NO"));
+
+            // Colors
+            utterances.Add(new SemanticResultValue("red", "RED"));
+            utterances.Add(new SemanticResultValue("the red one", "RED"));
+            utterances.Add(new SemanticResultValue("green", "GREEN"));
+            utterances.Add(new SemanticResultValue("the green one", "GREEN"));
+            utterances.Add(new SemanticResultValue("yellow", "YELLOW"));
+            utterances.Add(new SemanticResultValue("the yellow one", "YELLOW"));
+            utterances.Add(new SemanticResultValue("orange", "ORANGE"));
+            utterances.Add(new SemanticResultValue("the orange one", "ORANGE"));
+            utterances.Add(new SemanticResultValue("black", "BLACK"));
+            utterances.Add(new SemanticResultValue("the black one", "BLACK"));
+            utterances.Add(new SemanticResultValue("purple", "PURPLE"));
+            utterances.Add(new SemanticResultValue("the purple one", "PURPLE"));
+            utterances.Add(new SemanticResultValue("white", "WHITE"));
+            utterances.Add(new SemanticResultValue("the white one", "WHITE"));
+
+            // Properties
+            utterances.Add(new SemanticResultValue("big", "BIG"));
+            utterances.Add(new SemanticResultValue("the big one", "BIG"));
+            utterances.Add(new SemanticResultValue("small", "SMALL"));
+            utterances.Add(new SemanticResultValue("the small one", "SMALL"));
+
+            // Demonstratives
+            utterances.Add(new SemanticResultValue("this", "THIS"));
+            utterances.Add(new SemanticResultValue("this one", "THIS"));
+
+            utterances.Add(new SemanticResultValue("that", "THAT"));
+            utterances.Add(new SemanticResultValue("that one", "THAT"));
+
+            utterances.Add(new SemanticResultValue("there", "THERE"));
+
+            // Surprise
+            utterances.Add(new SemanticResultValue("what", "WHAT"));
+
+            var gb = new GrammarBuilder { Culture = ci };
+            gb.Append(utterances);
+
+            return new Grammar(gb);
         }
 
         
