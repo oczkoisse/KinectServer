@@ -2,7 +2,7 @@
 
 import socket, sys, struct
 
-src_addr = '127.0.0.1'
+src_addr = 'localhost'
 src_port = 8000
 
 stream_id = 4;
@@ -79,12 +79,9 @@ if __name__ == '__main__':
         try:
             f = recv_speech_frame(s)
         except:
+            s.close()
             break
         timestamp, frame_type, command = decode_frame(f)
         if command != "":
             print timestamp, frame_type, command
             print "\n\n"
-
-
-    s.close()
-    sys.exit(0)

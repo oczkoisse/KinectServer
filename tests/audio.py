@@ -5,7 +5,7 @@ import sys
 import numpy as np
 import wave
 
-src_addr = '127.0.0.1'
+src_addr = 'localhost'
 src_port = 8000
 
 stream_id = 8;

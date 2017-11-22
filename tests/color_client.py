@@ -5,7 +5,7 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-src_addr = '127.0.0.1'
+src_addr = 'localhost'
 src_port = 8000
 
 stream_id = 2;

@@ -1,7 +1,8 @@
 import socket
 import struct
+import time
 
-src_addr = '127.0.0.1'
+src_addr = 'localhost'
 src_port = 8000
 
 stream_id = 32;
@@ -80,14 +81,24 @@ if __name__ == '__main__':
     s = connect()
     if s is None:
         sys.exit(0)
-        
+    
+    start_time = time.time()
+    count = 0
     while True:
         try:
             f = recv_skeleton_frame(s)
-            timestamp, frame_type, tracked_body_count, engaged = decode_frame(f)[:4]
-            print timestamp, frame_type, tracked_body_count, 'Engaged' if engaged else 'Not Engaged'
         except:
             s.close()
             break
-        print "\n\n"
         
+        timestamp, frame_type, tracked_body_count, engaged = decode_frame(f)[:4]
+        #print timestamp, frame_type, tracked_body_count, 'Engaged' if engaged else 'Not Engaged'
+        #print "\n\n"
+
+        count += 1
+        if count == 100:
+            print '='*30
+            print 'FPS: ', 100.0 / (time.time() - start_time)
+            print '='*30
+            start_time = time.time()
+            count = 0

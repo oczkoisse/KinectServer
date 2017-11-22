@@ -5,7 +5,7 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-src_addr = '127.0.0.1'
+src_addr = 'localhost'
 src_port = 8000
 
 stream_id = 128;
@@ -75,34 +75,29 @@ if __name__ == '__main__':
     if s is None:
         sys.exit(0)
         
-    i = 0
-    avg_frame_time = 0.0
     do_plot = True if len(sys.argv) > 1 and sys.argv[1] == '--plot' else False
     
+    start_time = time.time()
+    count = 0
     while True:
         try:
-            t_begin = time.time()
             f = recv_depth_frame(s)
-            t_end = time.time()
         except:
+            s.close()
             break
-        print "Time taken for this frame: {}".format(t_end - t_begin)
-        avg_frame_time += (t_end - t_begin)
         timestamp, frame_type, width, height, posx, posy, depth_data = decode_frame(f)
-        print timestamp, frame_type, width, height
-        
+        #print timestamp, frame_type, width, height
+        #print "\n\n"
+
+        count += 1
+        if count == 100:
+            print '='*30
+            print 'FPS: ', 100.0 / (time.time() - start_time)
+            print '='*30
+            start_time = time.time()
+            count = 0
+            
         if do_plot and i % 20 == 0 and height*width > 0:
             image = np.array(depth_data).reshape((height, width))
             im = plt.imshow(image, cmap='gray')
             plt.show()
-
-        print "\n\n"
-        i += 1
-
-    if i != 0:
-        print "Total frame time: {}".format(avg_frame_time)
-        avg_frame_time /= i
-        print "Average frame time over {} frames: {}".format(i, avg_frame_time)
-
-    s.close()
-    sys.exit(0)
