@@ -567,25 +567,36 @@ namespace KSIM
 
 
             var propertiesGrammarBuilder = new GrammarBuilder { Culture = ci };
-            propertiesGrammarBuilder.Append("the");
             propertiesGrammarBuilder.Append(new SemanticResultKey("property", properties));
             propertiesGrammarBuilder.Append(refs);
 
             grammars.Add(new Grammar(propertiesGrammarBuilder));
 
             // Locations
-            var locationGrammarBuilder = new GrammarBuilder { Culture = ci };
-            var directions = new Choices();
-            directions.Add(new SemanticResultValue("left", "LEFT"));
-            directions.Add(new SemanticResultValue("right", "RIGHT"));
-            directions.Add(new SemanticResultValue("front", "FRONT"));
-            directions.Add(new SemanticResultValue("back", "BACK"));
+            var xLocationGrammarBuilder = new GrammarBuilder { Culture = ci };
 
-            locationGrammarBuilder.Append("to");
-            locationGrammarBuilder.Append("the");
-            locationGrammarBuilder.Append(new SemanticResultKey("direction", directions));
+            var xDirections = new Choices();
+            xDirections.Add(new SemanticResultValue("left", "LEFT"));
+            xDirections.Add(new SemanticResultValue("right", "RIGHT"));
 
-            grammars.Add(new Grammar(locationGrammarBuilder));
+            xLocationGrammarBuilder.Append("on");
+            xLocationGrammarBuilder.Append("the");
+            xLocationGrammarBuilder.Append(new SemanticResultKey("xDirection", xDirections));
+
+            grammars.Add(new Grammar(xLocationGrammarBuilder));
+
+            var yLocationGrammarBuilder = new GrammarBuilder { Culture = ci };
+
+            var yDirections = new Choices();
+            yDirections.Add(new SemanticResultValue("front", "FRONT"));
+            yDirections.Add(new SemanticResultValue("back", "BACK"));
+
+            yLocationGrammarBuilder.Append("at");
+            yLocationGrammarBuilder.Append("the");
+            yLocationGrammarBuilder.Append(new SemanticResultKey("yDirection", yDirections));
+
+
+            grammars.Add(new Grammar(yLocationGrammarBuilder));
 
             // Answers yes/no
             var answersGrammarBuilder = new GrammarBuilder { Culture = ci };
