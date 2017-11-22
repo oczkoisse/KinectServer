@@ -498,7 +498,7 @@ namespace KSIM
 
         private bool InitializeSpeechEngine()
         {
-            Grammar g = null;
+            List<Grammar> grammars = null;
             if (listenFromKinect)
             {
                 RecognizerInfo ri = TryGetKinectRecognizer();
@@ -507,7 +507,7 @@ namespace KSIM
                     speechEngine = new SpeechRecognitionEngine(ri.Id);
                     speechEngine.SetInputToAudioStream(
                     this.audioStream, new SpeechAudioFormatInfo(EncodingFormat.Pcm, 16000, 16, 1, 32000, 2, null));
-                    g = GetGrammars(ri.Culture);
+                    GetGrammars(ri.Culture, out grammars);
                 }
             }
             else
@@ -517,13 +517,16 @@ namespace KSIM
                 {
                     speechEngine = new SpeechRecognitionEngine(ci);
                     speechEngine.SetInputToDefaultAudioDevice();
-                    g = GetGrammars(ci);
+                    GetGrammars(ci, out grammars);
                 }
             }
 
-            if (g != null)
+            if (grammars.Count > 0)
             {
-                speechEngine.LoadGrammar(g);
+                foreach (Grammar g in grammars)
+                {
+                    speechEngine.LoadGrammar(g);
+                }
                 speechEngine.RecognizeAsync(RecognizeMode.Multiple);
                 speechEngine.SpeechRecognized += Reader_SpeechRecognized;
                 return true;
@@ -531,73 +534,91 @@ namespace KSIM
             return false;
         }
 
-        private Grammar GetGrammars(CultureInfo ci)
+        private void GetGrammars(CultureInfo ci, out List<Grammar> grammars)
         {
-            var utterances = new Choices();
-            // Directions
-            utterances.Add(new SemanticResultValue("left", "LEFT"));
-            utterances.Add(new SemanticResultValue("to the left", "LEFT"));
-            utterances.Add(new SemanticResultValue("to my left", "LEFT"));
-
-            utterances.Add(new SemanticResultValue("right", "RIGHT"));
-            utterances.Add(new SemanticResultValue("to the right", "RIGHT"));
-            utterances.Add(new SemanticResultValue("to my right", "RIGHT"));
-
-            utterances.Add(new SemanticResultValue("up", "UP"));
-            utterances.Add(new SemanticResultValue("down", "DOWN"));
-
-            utterances.Add(new SemanticResultValue("forward", "FORWARD"));
-            utterances.Add(new SemanticResultValue("back", "BACK"));
-
-            // Actions
-            utterances.Add(new SemanticResultValue("grab", "GRAB"));
-            utterances.Add(new SemanticResultValue("lift", "LIFT"));
-            utterances.Add(new SemanticResultValue("push", "PUSH"));
-            utterances.Add(new SemanticResultValue("put", "PUT"));
-
-            utterances.Add(new SemanticResultValue("yes", "YES"));
-            utterances.Add(new SemanticResultValue("yeah", "YES"));
-        
-            utterances.Add(new SemanticResultValue("no", "NO"));
-
+            grammars = new List<Grammar>();
+            var properties = new Choices();
             // Colors
-            utterances.Add(new SemanticResultValue("red", "RED"));
-            utterances.Add(new SemanticResultValue("the red one", "RED"));
-            utterances.Add(new SemanticResultValue("green", "GREEN"));
-            utterances.Add(new SemanticResultValue("the green one", "GREEN"));
-            utterances.Add(new SemanticResultValue("yellow", "YELLOW"));
-            utterances.Add(new SemanticResultValue("the yellow one", "YELLOW"));
-            utterances.Add(new SemanticResultValue("orange", "ORANGE"));
-            utterances.Add(new SemanticResultValue("the orange one", "ORANGE"));
-            utterances.Add(new SemanticResultValue("black", "BLACK"));
-            utterances.Add(new SemanticResultValue("the black one", "BLACK"));
-            utterances.Add(new SemanticResultValue("purple", "PURPLE"));
-            utterances.Add(new SemanticResultValue("the purple one", "PURPLE"));
-            utterances.Add(new SemanticResultValue("white", "WHITE"));
-            utterances.Add(new SemanticResultValue("the white one", "WHITE"));
+            properties.Add(new SemanticResultValue("red", "RED"));
+            properties.Add(new SemanticResultValue("green", "GREEN"));
+            properties.Add(new SemanticResultValue("yellow", "YELLOW"));
+            properties.Add(new SemanticResultValue("purple", "PURPLE"));
+            properties.Add(new SemanticResultValue("black", "BLACK"));
+            properties.Add(new SemanticResultValue("white", "WHITE"));
+            properties.Add(new SemanticResultValue("orange", "ORANGE"));
+            // Size
+            properties.Add(new SemanticResultValue("big", "BIG"));
+            properties.Add(new SemanticResultValue("small", "SMALL"));
 
-            // Properties
-            utterances.Add(new SemanticResultValue("big", "BIG"));
-            utterances.Add(new SemanticResultValue("the big one", "BIG"));
-            utterances.Add(new SemanticResultValue("small", "SMALL"));
-            utterances.Add(new SemanticResultValue("the small one", "SMALL"));
+        
+            var refs = new Choices("one", "block");
+
+
+            var propertiesGrammarBuilder = new GrammarBuilder { Culture = ci };
+            propertiesGrammarBuilder.Append("the");
+            propertiesGrammarBuilder.Append(new SemanticResultKey("property", properties));
+            propertiesGrammarBuilder.Append(refs);
+
+            grammars.Add(new Grammar(propertiesGrammarBuilder));
+
+            // Locations
+            var locationGrammarBuilder = new GrammarBuilder { Culture = ci };
+            var directions = new Choices();
+            directions.Add(new SemanticResultValue("left", "LEFT"));
+            directions.Add(new SemanticResultValue("right", "RIGHT"));
+            directions.Add(new SemanticResultValue("front", "FRONT"));
+            directions.Add(new SemanticResultValue("back", "BACK"));
+
+            locationGrammarBuilder.Append("to");
+            locationGrammarBuilder.Append("the");
+            locationGrammarBuilder.Append(new SemanticResultKey("direction", directions));
+
+            grammars.Add(new Grammar(locationGrammarBuilder));
+
+            // Answers yes/no
+            var answersGrammarBuilder = new GrammarBuilder { Culture = ci };
+            var answers = new Choices();
+            answers.Add(new SemanticResultValue("yes", "YES"));
+            answers.Add(new SemanticResultValue("yeah", "YES"));
+            answers.Add(new SemanticResultValue("no", "NO"));
+
+            answersGrammarBuilder.Append(new SemanticResultKey("answer", answers));
+
+            grammars.Add(new Grammar(answersGrammarBuilder));
+
+            // Actions 
+            var actionsGrammarBuilder = new GrammarBuilder { Culture = ci };
+            var actions = new Choices();
+            actions.Add(new SemanticResultValue("grab", "GRAB"));
+            actions.Add(new SemanticResultValue("lift", "LIFT"));
+            actions.Add(new SemanticResultValue("push", "PUSH"));
+            actions.Add(new SemanticResultValue("put", "PUT"));
+
+            actionsGrammarBuilder.Append(new SemanticResultKey("action", actions));
+
+            grammars.Add(new Grammar(actionsGrammarBuilder));
+
 
             // Demonstratives
-            utterances.Add(new SemanticResultValue("this", "THIS"));
-            utterances.Add(new SemanticResultValue("this one", "THIS"));
+            var demonstrativesGrammarBuilder = new GrammarBuilder { Culture = ci };
+            var demonstratives = new Choices();
+            demonstratives.Add(new SemanticResultValue("this", "THIS"));
+            demonstratives.Add(new SemanticResultValue("that", "THAT"));
 
-            utterances.Add(new SemanticResultValue("that", "THAT"));
-            utterances.Add(new SemanticResultValue("that one", "THAT"));
+            demonstrativesGrammarBuilder.Append(new SemanticResultKey("demonstrative", demonstratives));
+            demonstrativesGrammarBuilder.Append(refs);
 
-            utterances.Add(new SemanticResultValue("there", "THERE"));
+            grammars.Add(new Grammar(demonstrativesGrammarBuilder));
 
-            // Surprise
-            utterances.Add(new SemanticResultValue("what", "WHAT"));
+            // Others
+            var othersGrammarBuilder = new GrammarBuilder { Culture = ci };
+            var others = new Choices();
+            others.Add(new SemanticResultValue("there", "THERE"));
+            others.Add(new SemanticResultValue("what", "WHAT"));
 
-            var gb = new GrammarBuilder { Culture = ci };
-            gb.Append(utterances);
+            othersGrammarBuilder.Append(new SemanticResultKey("other", others));
 
-            return new Grammar(gb);
+            grammars.Add(new Grammar(othersGrammarBuilder));
         }
 
         

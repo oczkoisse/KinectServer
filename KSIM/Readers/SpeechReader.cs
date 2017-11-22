@@ -57,14 +57,31 @@ namespace KSIM.Readers
             get { return command.Length > 0; }
         }
 
+        private static String[] recognizedKeys = new String[] { "direction", "property", "demonstrative", "other", "action" };
+        private static double phraseConfidence = 0.3;
+        private static double keyConfidence = 0.1;
+
         public SpeechFrame(RecognitionResult r)
         {
             this.Type = FrameType.Speech;
-            
-            if (r.Confidence >= 0.3)
+
+            Debug.WriteLine("Phrase confidence: " + r.Semantics.Confidence);
+
+            if (r.Confidence >= phraseConfidence)
             {
-                command = r.Semantics.Value.ToString();
-                Debug.Write(command + "\n");
+                foreach (String k in recognizedKeys)
+                {
+                    if (r.Semantics.ContainsKey(k))
+                    {
+                        Debug.WriteLine("Key confidence: " + r.Semantics[k].Confidence);
+                        if (r.Semantics[k].Confidence >= keyConfidence)
+                        {
+                            command = r.Semantics[k].Value.ToString();
+                            Debug.WriteLine(command);
+                        }
+                        break;
+                    }
+                }                
             }
         }
 
@@ -82,6 +99,7 @@ namespace KSIM.Readers
                 a_plus_b.command = a.command;
             else
                 a_plus_b.command = b.command;
+   
             return a_plus_b;
         }
            
