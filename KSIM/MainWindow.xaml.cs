@@ -255,21 +255,33 @@ namespace KSIM
         public MainWindow()
         {
             String[] args = Environment.GetCommandLineArgs();
-            if (args.Length >= 2 && args[0] == "--listen")
+            if (args.Length >= 3 && args[1] == "--listen")
             {
-                switch(args[1].ToLower())
+                switch(args[2].ToLower())
                 {
-                    default:
                     case "kinect":
                     case "k":
                         listenFromKinect = true;
+                        Debug.WriteLine("Listening from Kinect...");
                         break;
                 
                     case "microphone":
                     case "m":
                         listenFromKinect = false;
+                        Debug.WriteLine("Listening from microphone...");
+                        break;
+                    default:
+                        Console.WriteLine("Invalid --listen argument: " + args[2]);
+                        Environment.Exit(0);
                         break;
                 }
+            }
+            else
+            {
+                if (listenFromKinect)
+                    Debug.WriteLine("Listening from Kinect...");
+                else
+                    Debug.WriteLine("Listening from microphone...");
             }
                 
             LastTimestamp = Int64.MinValue;
