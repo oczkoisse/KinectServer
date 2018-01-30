@@ -604,6 +604,8 @@ namespace KSIM
             answers.Add(new SemanticResultValue("yes", "YES"));
             answers.Add(new SemanticResultValue("yeah", "YES"));
             answers.Add(new SemanticResultValue("no", "NO"));
+            answers.Add(new SemanticResultValue("nothing", "NOTHING"));
+            answers.Add(new SemanticResultValue("never mind", "NEVERMIND"));
 
             answersGrammarBuilder.Append(new SemanticResultKey("answer", answers));
 
