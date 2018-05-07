@@ -31,6 +31,7 @@ namespace KSIM.Readers
     {
         private bool disposed = false; 
         private readonly static double engageBound = 5.0;
+        private readonly static double deskEndBoundZ = 1.5;
         private Body closestBody = null;
         protected BodyFrame underlyingBodyFrame = null;
 
@@ -50,7 +51,7 @@ namespace KSIM.Readers
         {
             get
             {
-                return closestNormSqr < engageBound;
+                return closestNormSqr < engageBound && this.Joints != null && this.Joints[JointType.SpineBase].Position.Z > deskEndBoundZ;
             }
         }
 
