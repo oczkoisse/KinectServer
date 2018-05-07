@@ -603,6 +603,7 @@ namespace KSIM
             var answers = new Choices();
             answers.Add(new SemanticResultValue("yes", "YES"));
             answers.Add(new SemanticResultValue("yeah", "YES"));
+            answers.Add(new SemanticResultValue("please", "YES"));
             answers.Add(new SemanticResultValue("no", "NO"));
             answers.Add(new SemanticResultValue("nothing", "NOTHING"));
             answers.Add(new SemanticResultValue("never mind", "NEVERMIND"));
@@ -640,6 +641,7 @@ namespace KSIM
             var others = new Choices();
             others.Add(new SemanticResultValue("there", "THERE"));
             others.Add(new SemanticResultValue("what", "WHAT"));
+            others.Add(new SemanticResultValue("learn", "LEARN"));
 
             othersGrammarBuilder.Append(new SemanticResultKey("other", others));
 
