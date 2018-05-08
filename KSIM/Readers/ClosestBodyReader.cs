@@ -29,9 +29,12 @@ namespace KSIM.Readers
 
     public class ClosestBodyFrame : Frame
     {
-        private bool disposed = false; 
-        private readonly static double engageBound = 5.0;
-        private readonly static double deskEndBoundZ = 1.5;
+        private bool disposed = false;
+
+        private readonly static double engageBeginBoundZ = 1.5;
+        private readonly static double engageEndBoundZ = 5.0;
+
+
         private Body closestBody = null;
         protected BodyFrame underlyingBodyFrame = null;
 
@@ -45,13 +48,31 @@ namespace KSIM.Readers
             }
         }
 
-        private double closestNormSqr = Double.MaxValue;
+        private static bool IsEngaged(Body body)
+        {
+            double distance = DistanceFromKinect(body);
+            return IsEngaged(distance);
+        }
+
+        private static bool IsEngaged(double distance)
+        {
+            return distance > engageBeginBoundZ && distance < engageEndBoundZ;
+        }
+
+        private static double DistanceFromKinect(Body body)
+        {
+            if (!body.IsTracked)
+                return Double.MaxValue;
+
+            var pos = body.Joints[JointType.SpineBase].Position;
+            return Math.Pow(pos.X, 2) + Math.Pow(pos.Y, 2) + Math.Pow(pos.Z, 2);
+        }
 
         public bool Engaged
         {
             get
             {
-                return closestNormSqr < engageBound && this.Joints != null && this.Joints[JointType.SpineBase].Position.Z > deskEndBoundZ;
+                return this.closestBody != null && IsEngaged(this.closestBody);
             }
         }
 
@@ -116,6 +137,8 @@ namespace KSIM.Readers
             get { return BodyFound ? closestIndex : -1; }
         }
 
+        
+
         public ClosestBodyFrame(Microsoft.Kinect.BodyFrame bf)
         {
             Type = FrameType.ClosestBody;
@@ -124,24 +147,23 @@ namespace KSIM.Readers
             Body[] bodies = new Body[bf.BodyCount];
             bf.GetAndRefreshBodyData(bodies);
 
+            double closestDistance = Double.MaxValue;
+
             for (int i = 0; i < bodies.Length; i++)
             {
                 var body = bodies[i];
 
                 if (body.IsTracked)
-                {
-                    var pos = body.Joints[JointType.SpineBase].Position;
-                    double normSqr = Math.Pow(pos.X, 2) + Math.Pow(pos.Y, 2) + Math.Pow(pos.Z, 2);
-
-                    // The following is always true for first tracked body
-                    if (normSqr < closestNormSqr)
-                    {
-                        closestBody = body;
-                        closestNormSqr = normSqr;
-                        closestIndex = i;
-                    }
-
                     trackedCount++;
+
+                double distance = DistanceFromKinect(body);
+
+                if (IsEngaged(distance) && distance < closestDistance)
+                {
+
+                    closestBody = body;
+                    closestDistance = distance;
+                    closestIndex = i;
                 }
             }
             // Enagaged implies BodyFound 
