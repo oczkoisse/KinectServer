@@ -12,6 +12,8 @@ namespace KSIM.Readers
 {
     public sealed class ClosestBodyReader : Reader
     {
+        private static ulong previousEngagedTrackingId = 0;
+
         public override Frame Read(MultiSourceFrame f)
         {
             // Note that we do not dispose the acquired frame
@@ -20,7 +22,12 @@ namespace KSIM.Readers
 
             if (originalFrame != null)
             {
-                return new ClosestBodyFrame(originalFrame);
+                var cbf = new ClosestBodyFrame(originalFrame, previousEngagedTrackingId);
+                if (cbf.Engaged)
+                    previousEngagedTrackingId = cbf.TrackingId;
+                else
+                    previousEngagedTrackingId = 0;
+                return cbf;
             }
             
             return null;
@@ -72,13 +79,13 @@ namespace KSIM.Readers
         {
             get
             {
-                return this.closestBody != null && IsEngaged(this.closestBody);
+                return BodyFound && IsEngaged(this.closestBody);
             }
         }
 
         public bool BodyFound
         {
-            get { return trackedCount > 0; }
+            get { return this.closestBody != null; }
         }
 
         public ulong TrackingId
@@ -139,7 +146,7 @@ namespace KSIM.Readers
 
         
 
-        public ClosestBodyFrame(Microsoft.Kinect.BodyFrame bf)
+        public ClosestBodyFrame(Microsoft.Kinect.BodyFrame bf, ulong preferredTrackingId)
         {
             Type = FrameType.ClosestBody;
             this.underlyingBodyFrame = bf;
@@ -158,12 +165,20 @@ namespace KSIM.Readers
 
                 double distance = DistanceFromKinect(body);
 
-                if (IsEngaged(distance) && distance < closestDistance)
+                if (IsEngaged(distance))
                 {
-
-                    closestBody = body;
-                    closestDistance = distance;
-                    closestIndex = i;
+                    if (body.TrackingId == preferredTrackingId)
+                    {
+                        closestBody = body;
+                        closestIndex = i;
+                        break;
+                    }
+                    else if (distance < closestDistance)
+                    {
+                        closestBody = body;
+                        closestDistance = distance;
+                        closestIndex = i;
+                    }
                 }
             }
             // Enagaged implies BodyFound 
