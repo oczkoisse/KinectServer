@@ -48,6 +48,8 @@ namespace KSIM.Readers
 
     class SpeechFrame : Frame
     {
+        private const string _commandDelimiter = ", ";
+
         private bool disposed = false;
 
         private string command = "";
@@ -65,7 +67,7 @@ namespace KSIM.Readers
         {
             this.Type = FrameType.Speech;
 
-            Debug.WriteLine("Phrase confidence: " + r.Semantics.Confidence);
+            Debug.WriteLine("Phrase \"{0}\" (confidence: {1})", r.Text, r.Confidence);
 
             if (r.Confidence >= phraseConfidence)
             {
@@ -73,7 +75,7 @@ namespace KSIM.Readers
                 {
                     if (r.Semantics.ContainsKey(k))
                     {
-                        Debug.WriteLine("Key confidence: " + r.Semantics[k].Confidence);
+                        Debug.WriteLine("Key \"{0}\" (confidence: {1})", k, r.Semantics[k].Confidence);
                         if (r.Semantics[k].Confidence >= keyConfidence)
                         {
                             command = r.Semantics[k].Value.ToString();
@@ -94,7 +96,7 @@ namespace KSIM.Readers
         {
             SpeechFrame a_plus_b = new SpeechFrame();
             if (a.HasData && b.HasData)
-                a_plus_b.command = a.command + ", " + b.command;
+                a_plus_b.command = a.command + _commandDelimiter + b.command;
             else if (a.HasData)
                 a_plus_b.command = a.command;
             else

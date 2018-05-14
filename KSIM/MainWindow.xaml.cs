@@ -8,22 +8,13 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Threading;
 using Microsoft.Speech.AudioFormat;
 using Microsoft.Speech.Recognition;
-using Microsoft.Speech.Synthesis;
 using System.Globalization;
+using System.Text;
+using System.Windows.Controls;
 
 namespace KSIM
 {
@@ -291,6 +282,35 @@ namespace KSIM
                 server.Start();
                 ContinueAcceptConnections();
                 InitializeComponent();
+                textBox.Clear();
+                Trace.Listeners.Add(new TextWriterTraceListener(new TextBoxWriter(textBox)));
+                Trace.WriteLine("App started");
+
+            }
+        }
+
+        class TextBoxWriter : TextWriter
+        {
+
+            private TextBox outputBox;
+
+            public TextBoxWriter(TextBox box)
+            {
+                outputBox = box;
+            }
+
+            public override Encoding Encoding { get { return System.Text.Encoding.ASCII;} }
+
+            public override void Write(char text)
+            {
+                outputBox.AppendText(text.ToString());
+                outputBox.ScrollToEnd();
+            }
+
+            public override void WriteLine(char text)
+            {
+                Write(text);
+                outputBox.AppendText("\n");
             }
         }
 

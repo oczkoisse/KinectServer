@@ -6,11 +6,5 @@
         xmlns:local="clr-namespace:KSIM"
         mc:Ignorable="d"
         Title="KSIM" Height="241.737" Width="403.39" Closed="Window_Closed">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="375*"/>
-            <ColumnDefinition Width="142*"/>
-        </Grid.ColumnDefinitions>
-
-    </Grid>
+    <TextBox x:Name="textBox" TextWrapping="Wrap" Text="TextBox" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
 </Window>
