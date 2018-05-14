@@ -15,6 +15,8 @@ using Microsoft.Speech.Recognition;
 using System.Globalization;
 using System.Text;
 using System.Windows.Controls;
+using Microsoft.Speech.Recognition.SrgsGrammar;
+using Mono.Options;
 
 namespace KSIM
 {
@@ -28,9 +30,10 @@ namespace KSIM
         /// <summary>
         /// The port at which the application listens for incoming stream requests for Kinect clients
         /// </summary>
-        private const int PORT = 8000;
+        private static int PORT = 8000;
 
         private static bool listenFromKinect = true;
+        private string _grammarFile;
 
         /// <summary>
         /// Reference to the Kinect sensor. Needed to Close() at the application exit.
@@ -246,35 +249,25 @@ namespace KSIM
         public MainWindow()
         {
             String[] args = Environment.GetCommandLineArgs();
-            if (args.Length >= 3 && args[1] == "--listen")
+
+            var p = new OptionSet
             {
-                switch(args[2].ToLower())
                 {
-                    case "kinect":
-                    case "k":
-                        listenFromKinect = true;
-                        Debug.WriteLine("Listening from Kinect...");
-                        break;
-                
-                    case "microphone":
-                    case "m":
-                        listenFromKinect = false;
-                        Debug.WriteLine("Listening from microphone...");
-                        break;
-                    default:
-                        Console.WriteLine("Invalid --listen argument: " + args[2]);
-                        Environment.Exit(0);
-                        break;
+                    "l=|listen=", "the microphone to use in speech module.",
+                    v => listenFromKinect = v.ToLower().StartsWith("k")
+                },
+                {
+                    "p=|port=", "port number to use to send kinect streams.",
+                    v =>  PORT = v != null ? Int32.Parse(v) : 8000
+                },
+                {
+                    "g=|grammar=", "grammar file name to use for speech (cfg or grxml).",
+                    v => _grammarFile = v
                 }
-            }
-            else
-            {
-                if (listenFromKinect)
-                    Debug.WriteLine("Listening from Kinect...");
-                else
-                    Debug.WriteLine("Listening from microphone...");
-            }
-                
+            };
+
+            p.Parse(args);
+
             LastTimestamp = Int64.MinValue;
             bool success = InitializeKinect();
             if (success)
@@ -284,7 +277,7 @@ namespace KSIM
                 InitializeComponent();
                 textBox.Clear();
                 Trace.Listeners.Add(new TextWriterTraceListener(new TextBoxWriter(textBox)));
-                Trace.WriteLine("App started");
+                Trace.WriteLine(string.Format("App started at port {0} using {1} microphone and {2} grammar", PORT, listenFromKinect? "k" : "m", _grammarFile? _grammarFile : "default"));
 
             }
         }
@@ -494,7 +487,7 @@ namespace KSIM
                     throw new InvalidOperationException("Unable to initialize Kinect Audio, so can't listen from it");    
                 }
                 else
-                    InitializeSpeechEngine();
+                    InitializeSpeechEngine(_grammarFile);
 
                 sensor.Open();
                 multiSourceFrameReader.MultiSourceFrameArrived += Reader_MultiSourceFrameArrived;
@@ -528,7 +521,31 @@ namespace KSIM
             return false;
         }
 
-        private bool InitializeSpeechEngine()
+        static Grammar LoadGrammar(string grammarPathString, bool forceCompile)
+        {
+            string compiledGrammarPathString;
+            string grammarExtension = Path.GetExtension(grammarPathString);
+            if (grammarExtension.Equals(".grxml", StringComparison.OrdinalIgnoreCase)) {
+                compiledGrammarPathString = Path.ChangeExtension(grammarPathString, "cfg");
+            } else if (grammarExtension.Equals(".cfg", StringComparison.OrdinalIgnoreCase)) {
+                compiledGrammarPathString = grammarPathString;
+            } else {
+                throw new FormatException("Grammar file format is unsupported: " + grammarExtension);
+            }
+
+            // skip cpmpilation if "cfg" grammar already exists
+            if (forceCompile || !File.Exists(compiledGrammarPathString))
+            {
+                FileStream fs = new FileStream(compiledGrammarPathString, FileMode.Create);
+                var srgs = new SrgsDocument(grammarPathString);
+                SrgsGrammarCompiler.Compile(srgs, fs);
+                fs.Close();
+            }
+
+            return new Grammar(compiledGrammarPathString);
+        }
+
+        private bool InitializeSpeechEngine(string grammarFileName)
         {
             List<Grammar> grammars = null;
             if (listenFromKinect)
@@ -539,7 +556,14 @@ namespace KSIM
                     speechEngine = new SpeechRecognitionEngine(ri.Id);
                     speechEngine.SetInputToAudioStream(
                     this.audioStream, new SpeechAudioFormatInfo(EncodingFormat.Pcm, 16000, 16, 1, 32000, 2, null));
-                    GetGrammars(ri.Culture, out grammars);
+                    if (grammarFileName == null)
+                    {
+                        GetGrammars(ri.Culture, out grammars);
+                    }
+                    else
+                    {
+                        grammars.Add(LoadGrammar(grammarFileName, true));
+                    }
                 }
             }
             else
