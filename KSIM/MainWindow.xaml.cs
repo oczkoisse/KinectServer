@@ -285,25 +285,34 @@ namespace KSIM
         class TextBoxWriter : TextWriter
         {
 
-            private TextBox outputBox;
+            private TextBox _outBox;
+            private StringSendDelegate _invoker;
+
+            private delegate void StringSendDelegate(string message);
 
             public TextBoxWriter(TextBox box)
             {
-                outputBox = box;
+                _outBox = box;
+                _invoker = SendString;
             }
 
-            public override Encoding Encoding { get { return System.Text.Encoding.ASCII;} }
-
-            public override void Write(char text)
+            private void SendString(string message)
             {
-                outputBox.AppendText(text.ToString());
-                outputBox.ScrollToEnd();
+                _outBox.AppendText(message);
+                _outBox.ScrollToEnd();
             }
 
-            public override void WriteLine(char text)
+
+            public override Encoding Encoding { get { return Encoding.UTF8;} }
+
+            public override void Write(string text)
             {
-                Write(text);
-                outputBox.AppendText("\n");
+                _outBox.Dispatcher.Invoke(_invoker, text);
+            }
+
+            public override void WriteLine(string text)
+            {
+                _outBox.Dispatcher.Invoke(_invoker, text + Environment.NewLine);
             }
         }
 
