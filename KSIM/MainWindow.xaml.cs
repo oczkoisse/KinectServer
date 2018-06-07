@@ -277,7 +277,7 @@ namespace KSIM
                 InitializeComponent();
                 textBox.Clear();
                 Trace.Listeners.Add(new TextWriterTraceListener(new TextBoxWriter(textBox)));
-                Trace.WriteLine(string.Format("App started at port {0} using {1} microphone and {2} grammar", PORT, listenFromKinect? "k" : "m", _grammarFile? _grammarFile : "default"));
+                Trace.WriteLine(string.Format("App started at port {0} using {1} microphone and {2} grammar", PORT, listenFromKinect? "k" : "m", _grammarFile ?? "default"));
 
             }
         }
@@ -554,14 +554,15 @@ namespace KSIM
                 if (null != ri)
                 {
                     speechEngine = new SpeechRecognitionEngine(ri.Id);
-                    speechEngine.SetInputToAudioStream(
-                    this.audioStream, new SpeechAudioFormatInfo(EncodingFormat.Pcm, 16000, 16, 1, 32000, 2, null));
+                    speechEngine.SetInputToAudioStream(audioStream, new SpeechAudioFormatInfo(EncodingFormat.Pcm, 16000, 16, 1, 32000, 2, null));
+
                     if (grammarFileName == null)
                     {
                         GetGrammars(ri.Culture, out grammars);
                     }
                     else
                     {
+                        grammars = new List<Grammar>();
                         grammars.Add(LoadGrammar(grammarFileName, true));
                     }
                 }
@@ -573,7 +574,15 @@ namespace KSIM
                 {
                     speechEngine = new SpeechRecognitionEngine(ci);
                     speechEngine.SetInputToDefaultAudioDevice();
-                    GetGrammars(ci, out grammars);
+                    if (grammarFileName == null)
+                    {
+                        GetGrammars(ci, out grammars);
+                    }
+                    else
+                    {
+                        grammars = new List<Grammar>();
+                        grammars.Add(LoadGrammar(grammarFileName, true));
+                    }
                 }
             }
 
