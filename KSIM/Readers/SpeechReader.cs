@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -48,7 +48,7 @@ namespace KSIM.Readers
 
     class SpeechFrame : Frame
     {
-        private const string _commandDelimiter = ", ";
+        private const string _commandDelimiter = "/";
 
         private bool disposed = false;
 
