@@ -555,16 +555,7 @@ namespace KSIM
                 {
                     speechEngine = new SpeechRecognitionEngine(ri.Id);
                     speechEngine.SetInputToAudioStream(audioStream, new SpeechAudioFormatInfo(EncodingFormat.Pcm, 16000, 16, 1, 32000, 2, null));
-
-                    if (grammarFileName == null)
-                    {
-                        GetGrammars(ri.Culture, out grammars);
-                    }
-                    else
-                    {
-                        grammars = new List<Grammar>();
-                        grammars.Add(LoadGrammar(grammarFileName, true));
-                    }
+                    grammars = GetGrammars(grammarFileName, ri.Culture);
                 }
             }
             else
@@ -574,15 +565,7 @@ namespace KSIM
                 {
                     speechEngine = new SpeechRecognitionEngine(ci);
                     speechEngine.SetInputToDefaultAudioDevice();
-                    if (grammarFileName == null)
-                    {
-                        GetGrammars(ci, out grammars);
-                    }
-                    else
-                    {
-                        grammars = new List<Grammar>();
-                        grammars.Add(LoadGrammar(grammarFileName, true));
-                    }
+                    grammars = GetGrammars(grammarFileName, ci);
                 }
             }
 
@@ -599,7 +582,23 @@ namespace KSIM
             return false;
         }
 
-        private void GetGrammars(CultureInfo ci, out List<Grammar> grammars)
+        private List<Grammar> GetGrammars(string grammarFileName, CultureInfo ci)
+        {
+            List<Grammar> grammars;
+            if (grammarFileName == null)
+            {
+                grammars = BuildDefaultGrammar(ci, out grammars);
+            }
+            else
+            {
+                grammars = new List<Grammar>();
+                grammars.Add(LoadGrammar(grammarFileName, true));
+            }
+
+            return grammars;
+        }
+
+        private List<Grammar> BuildDefaultGrammar(CultureInfo ci, out List<Grammar> grammars)
         {
             grammars = new List<Grammar>();
             var properties = new Choices();
@@ -699,6 +698,7 @@ namespace KSIM
             othersGrammarBuilder.Append(new SemanticResultKey("other", others));
 
             grammars.Add(new Grammar(othersGrammarBuilder));
+            return grammars;
         }
 
         
