@@ -59,9 +59,7 @@ namespace KSIM.Readers
             get { return command.Length > 0; }
         }
 
-        private static String[] recognizedKeys = new String[] { "xDirection", "yDirection", "property", "demonstrative", "other", "action", "answer" };
         private static double phraseConfidence = 0.3;
-        private static double keyConfidence = 0.1;
 
         public SpeechFrame(RecognitionResult r)
         {
@@ -71,19 +69,9 @@ namespace KSIM.Readers
 
             if (r.Confidence >= phraseConfidence)
             {
-                foreach (String k in recognizedKeys)
-                {
-                    if (r.Semantics.ContainsKey(k))
-                    {
-                        Debug.WriteLine("Key \"{0}\" (confidence: {1})", k, r.Semantics[k].Confidence);
-                        if (r.Semantics[k].Confidence >= keyConfidence)
-                        {
-                            command = r.Semantics[k].Value.ToString();
-                            Debug.WriteLine(command);
-                        }
-                        break;
-                    }
-                }                
+                command = string.Format("{0},{1}", r.Semantics["Tag"].Value, r.Text);
+                Debug.WriteLine(command);
+
             }
         }
 
