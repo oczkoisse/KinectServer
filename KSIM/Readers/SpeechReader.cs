@@ -69,7 +69,15 @@ namespace KSIM.Readers
 
             if (r.Confidence >= phraseConfidence)
             {
-                command = string.Format("{0},{1}", r.Semantics["Tag"].Value, r.Text);
+                // temporary gapstop to re-use voxsim side input symbols for the PDA
+                if (r.Text.Contains(" "))
+                {
+                    command = string.Format("{0},{1}", r.Semantics["Tag"].Value, r.Text);
+                }
+                else
+                {
+                    command = string.Format("{0} {1}", r.Semantics["Tag"].Value, r.Text);
+                }
                 Debug.WriteLine(command);
 
             }
