@@ -277,7 +277,7 @@ namespace KSIM
                 InitializeComponent();
                 textBox.Clear();
 //                Trace.Listeners.Add(new TextWriterTraceListener(new TextBoxWriter(textBox)));
-                Trace.WriteLine(string.Format("App started at port {0} using {1} microphone and {2} grammar", PORT, listenFromKinect? "k" : "m", _grammarFile ?? "default"));
+                textBox.AppendText(string.Format("App started at port {0} using {1} microphone and {2} grammar", PORT, listenFromKinect? "k" : "m", _grammarFile ?? "default"));
 
             }
         }
@@ -447,6 +447,7 @@ namespace KSIM
             var sr = (SpeechReader)KSIM.Readers.FrameType.Speech.GetReader();
             textBox.AppendText($"Phrase \"{result.Text}\" (confidence: {result.Confidence})\n");
             textBox.AppendText($"{result.Semantics["Tag"].Value},{result.Text}\n");
+            textBox.ScrollToEnd();
             sr.Store(result);
         }
 
