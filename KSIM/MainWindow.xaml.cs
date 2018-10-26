@@ -32,8 +32,9 @@ namespace KSIM
         /// </summary>
         private static int PORT = 8000;
 
-        private static bool listenFromKinect = true;
+        private static bool listenFromKinect = false;
         private string _grammarFile;
+        private bool _show_help;
 
         /// <summary>
         /// Reference to the Kinect sensor. Needed to Close() at the application exit.
@@ -253,20 +254,31 @@ namespace KSIM
             var p = new OptionSet
             {
                 {
-                    "l=|listen=", "the microphone to use in speech module.",
-                    v => listenFromKinect = v.ToLower().StartsWith("k")
+                    "l=|listen=", "the microphone to use in speech module(\"k\" to use kinect, edfault: default microphone array).",
+                    v => listenFromKinect = v != null ? v.ToLower().StartsWith("k") : false
                 },
                 {
-                    "p=|port=", "port number to use to send kinect streams.",
+                    "p=|port=", "port number to use to send kinect streams. (default: 8000)",
                     v =>  PORT = v != null ? Int32.Parse(v) : 8000
                 },
                 {
-                    "g=|grammar=", "grammar file name to use for speech (cfg or grxml).",
-                    v => _grammarFile = v
+                    "g=|grammar=", "grammar file name to use for speech (cfg or grxml, default: out.grxml)",
+                    v => _grammarFile = v != null ? v : "out.grxml"
+                },
+                {
+                    "h|help", "show this message",
+                    v => _show_help = v != null
                 }
             };
 
             p.Parse(args);
+            if (_show_help)
+            {
+                Console.WriteLine ("Options:");
+                p.WriteOptionDescriptions(Console.Out);
+                Application.Current.Shutdown();
+                return;
+            }
 
             LastTimestamp = Int64.MinValue;
             bool success = InitializeKinect();
