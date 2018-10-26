@@ -116,7 +116,7 @@ namespace KSIM
             {
                 c = server.EndAcceptTcpClient(res);
             }
-            catch(ObjectDisposedException e)
+            catch(ObjectDisposedException)
             {
                 Debug.Write("Server closed while still listening.");
             }

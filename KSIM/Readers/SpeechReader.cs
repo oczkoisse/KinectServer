@@ -1,9 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Kinect;
 using System.Diagnostics;
 using System.Collections.Concurrent;
@@ -69,7 +65,7 @@ namespace KSIM.Readers
 
             if (r.Confidence >= phraseConfidence)
             {
-                // temporary gapstop to re-use voxsim side input symbols for the PDA
+                // temporary stopgap to re-use voxsim side input symbols for the PDA
                 if ("never mind".Equals(r.Text))
                 {
                     command = string.Format("{0} {1}", r.Semantics["Tag"].Value, r.Text);
