@@ -33,7 +33,7 @@ namespace KSIM
         private static int PORT = 8000;
 
         private static bool listenFromKinect = false;
-        private string _grammarFile;
+        private string _grammarFile = "out.grxml";
         private bool _show_help;
 
         /// <summary>
@@ -254,16 +254,16 @@ namespace KSIM
             var p = new OptionSet
             {
                 {
-                    "l=|listen=", "the microphone to use in speech module(\"k\" to use kinect, edfault: default microphone array).",
-                    v => listenFromKinect = v != null ? v.ToLower().StartsWith("k") : false
+                    "l=|listen=", "the microphone to use in speech module.",
+                    v => listenFromKinect = v.ToLower().StartsWith("k")
                 },
                 {
-                    "p=|port=", "port number to use to send kinect streams. (default: 8000)",
-                    v =>  PORT = v != null ? Int32.Parse(v) : 8000
+                    "p=|port=", "port number to use to send kinect streams.",
+                    v =>  PORT = Int32.Parse(v)
                 },
                 {
-                    "g=|grammar=", "grammar file name to use for speech (cfg or grxml, default: out.grxml)",
-                    v => _grammarFile = v != null ? v : "out.grxml"
+                    "g=|grammar=", "grammar file name to use for speech (cfg or grxml).",
+                    v => _grammarFile = v
                 },
                 {
                     "h|help", "show this message",
@@ -289,7 +289,8 @@ namespace KSIM
                 InitializeComponent();
                 textBox.Clear();
 //                Trace.Listeners.Add(new TextWriterTraceListener(new TextBoxWriter(textBox)));
-                textBox.AppendText(string.Format("App started at port {0} using {1} microphone and {2} grammar", PORT, listenFromKinect? "k" : "m", _grammarFile ?? "default"));
+                textBox.AppendText(string.Format("App started at port {0} using {1} microphone and {2} grammar",
+                    PORT, listenFromKinect? "k" : "m", _grammarFile ?? "default"));
 
             }
         }
