@@ -254,16 +254,16 @@ namespace KSIM
             var p = new OptionSet
             {
                 {
-                    "l=|listen=", "the microphone to use in speech module.",
-                    v => listenFromKinect = v.ToLower().StartsWith("k")
+                    "k|kinect", "use kinect microphone",
+                    v => listenFromKinect = v != null
                 },
                 {
-                    "p=|port=", "port number to use to send kinect streams.",
-                    v =>  PORT = Int32.Parse(v)
+                    "p=|port=", "port number to use to send kinect streams. (default: 8000)",
+                    v =>  PORT = v.Length > 0 ? Int32.Parse(v) : 8000
                 },
                 {
-                    "g=|grammar=", "grammar file name to use for speech (cfg or grxml).",
-                    v => _grammarFile = v
+                    "g=|grammar=", "grammar file name to use for speech (cfg or grxml, default: out.grxml).",
+                    v => this._grammarFile = v == null ?  "out.grxml" : v
                 },
                 {
                     "h|help", "show this message",
@@ -288,9 +288,8 @@ namespace KSIM
                 ContinueAcceptConnections();
                 InitializeComponent();
                 textBox.Clear();
-//                Trace.Listeners.Add(new TextWriterTraceListener(new TextBoxWriter(textBox)));
                 textBox.AppendText(string.Format("App started at port {0} using {1} microphone and {2} grammar",
-                    PORT, listenFromKinect? "k" : "m", _grammarFile ?? "default"));
+                    PORT, listenFromKinect? "kinect" : "normal", _grammarFile));
 
             }
         }
@@ -572,16 +571,25 @@ namespace KSIM
 
         private bool InitializeSpeechEngine(string grammarFileName)
         {
+            if (!File.Exists(grammarFileName))
+            {
+                Console.Error.WriteLine ($"Cannot find the language model file: {grammarFileName}");
+                Application.Current.Shutdown();
+                return false;
+            }
             List<Grammar> grammars = null;
             if (listenFromKinect)
             {
                 RecognizerInfo ri = TryGetKinectRecognizer();
-                if (null != ri)
+                if (null == ri)
                 {
-                    speechEngine = new SpeechRecognitionEngine(ri.Id);
-                    speechEngine.SetInputToAudioStream(audioStream, new SpeechAudioFormatInfo(EncodingFormat.Pcm, 16000, 16, 1, 32000, 2, null));
-                    grammars = GetGrammars(grammarFileName, ri.Culture);
+                    Console.Error.WriteLine("Cannot initiate Kinect microphone, is a Kinect (v2) plugged in?");
+                    Application.Current.Shutdown();
+                    return false;
                 }
+                speechEngine = new SpeechRecognitionEngine(ri.Id);
+                speechEngine.SetInputToAudioStream(audioStream, new SpeechAudioFormatInfo(EncodingFormat.Pcm, 16000, 16, 1, 32000, 2, null));
+                grammars = GetGrammars(grammarFileName, ri.Culture);
             }
             else
             {
