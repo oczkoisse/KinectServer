@@ -113,6 +113,7 @@ namespace KSIM.Readers
                 writer.Write(loadSize);
                 writer.Seek(0, SeekOrigin.End);
             }
+            base.Serialize(s);
         }
 
         protected override void Dispose(bool disposing)

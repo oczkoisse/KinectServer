@@ -100,10 +100,38 @@ namespace KSIM.Readers
             set { timestamp = value; }
         }
 
+        private byte[] writerData;
+        public byte[] WriterData
+        {
+            get { return writerData; }
+            set
+            {
+                if (writerData == null)
+                    writerData = value;
+                else
+                    throw new InvalidOperationException("Overwriting writer data in a frame is not allowed");
+            }
+        }
+
         // Note that serialization will follow little-endian format, even for network transfers
         // so write clients accordingly
-        public abstract void Serialize(Stream stream);
-        
+        public virtual void Serialize(Stream s)
+        {
+            if (s != null)
+            {
+                using (BinaryWriter writer = new BinaryWriter(s))
+                {
+                    if (WriterData == null)
+                        writer.Write(0);
+                    else
+                    {
+                        writer.Write(WriterData.Length);
+                        writer.Write(WriterData, 0, WriterData.Length);
+                    }
+                }
+            }
+        }
+            
         // Disposable pattern should always be implemented in base class
         protected abstract void Dispose(bool disposing);
 

@@ -116,6 +116,7 @@ namespace KSIM.Readers
                 writer.Write(loadSize);
                 writer.Seek(0, SeekOrigin.End);
             }
+            // No writer data is allowed for AudioFrames
         }
 
         protected override void Dispose(bool disposing)
