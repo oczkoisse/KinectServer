@@ -54,6 +54,7 @@ namespace KSIM
         /// A dictionary for holding stream types subscribed by each client. The subscribed streams should not contain Audio or Speech
         /// </summary>
         private Dictionary<TcpClient, List<Readers.FrameType>> connectedClients = new Dictionary<TcpClient, List<Readers.FrameType>>();
+        private List<TcpClient> writers = new List<TcpClient>();
 
         /// <summary>
         /// A dictionary for holding clients subscribed to Audio stream. These clients cannot be subscribed to any other stream.
@@ -141,10 +142,20 @@ namespace KSIM
             Debug.Assert(bytesRead == 4);
 
             // Get a list of valid stream types from these 4 bytes
-            List<Readers.FrameType> activeFrames = GetActiveFrames(requestedFrames);
 
+            bool isWriter = GetActiveFrames(requestedFrames, out List<Readers.FrameType> activeFrames);
+            
+            // If its a writer, then it can't request streams. Essentially, requested streams will be ignored.
+            if (isWriter)
+            {
+                lock(writers)
+                {
+                    Trace.WriteLine(String.Format("Accepted writer connection from {0}", c.Client.RemoteEndPoint.ToString()));
+                    writers.Add(c);
+                }
+            }
             // If there are one or more valid stream requests
-            if (activeFrames.Count >= 1)
+            else if (activeFrames.Count >= 1)
             {
                 // If the request does not involve Audio
                 if (!activeFrames.Contains(FrameType.Audio))
@@ -153,7 +164,7 @@ namespace KSIM
                     lock (connectedClients)
                     {
                         connectedClients.Add(c, activeFrames);
-                        Trace.WriteLine(String.Format("Accepted connection from {0}", c.Client.RemoteEndPoint.ToString()));
+                        Trace.WriteLine(String.Format("Accepted reader connection from {0}", c.Client.RemoteEndPoint.ToString()));
                         foreach (var ft in activeFrames)
                             Trace.WriteLine((int)ft);
                     }
@@ -164,7 +175,7 @@ namespace KSIM
                     lock (connectedAudioClients)
                     {
                         connectedAudioClients.Add(c);
-                        Trace.WriteLine(String.Format("Accepted connection from {0}", c.Client.RemoteEndPoint.ToString()));
+                        Trace.WriteLine(String.Format("Accepted reader connection from {0}", c.Client.RemoteEndPoint.ToString()));
                         Trace.WriteLine((int)activeFrames[0]);
                     }
                 }
@@ -213,21 +224,28 @@ namespace KSIM
         /// </summary>
         /// <param name="frameBytes"></param>
         /// <returns>A list of frame types as decoded from the input bytes</returns>
-        private List<Readers.FrameType> GetActiveFrames(byte[] frameBytes)
+        private bool GetActiveFrames(byte[] frameBytes, out List<Readers.FrameType> activeFrames)
         {
-            List<Readers.FrameType> activeFrames = new List<Readers.FrameType>();
+            
             // BitArray assumes these 4 bytes are little endian
             // i.e. first byte corresponds to bits 0-7
             BitArray reqFramesAsBits = new BitArray(frameBytes);
+            bool isWriter = reqFramesAsBits.Get(0);
 
-            // Determine which stream bits are active
-            foreach (Readers.FrameType ft in Enum.GetValues(typeof(Readers.FrameType)).Cast<Readers.FrameType>())
+            if (!isWriter)
             {
-                if (reqFramesAsBits.Get((int)ft))
-                    activeFrames.Add(ft);
+                activeFrames = new List<Readers.FrameType>();
+                // Determine which stream bits are active
+                foreach (Readers.FrameType ft in Enum.GetValues(typeof(Readers.FrameType)).Cast<Readers.FrameType>())
+                {
+                    if (reqFramesAsBits.Get((int)ft))
+                        activeFrames.Add(ft);
+                }
             }
-
-            return activeFrames;
+            else
+                activeFrames = null;
+            
+            return isWriter;
         }
 
 

@@ -24,7 +24,7 @@ namespace KSIM.Readers
         }
     }
 
-    // All frame types start internally from 1
+    // All frame types start internally from 1 (0 is reserved to encode writer bit)
     // i.e. if a client sends all zeros that is invalid frame type
     // The corresponding bit pattern that client should send for requesting a stream is computed as 2**frame_type
     public enum FrameType { Color=1, Speech, Audio, Depth, ClosestBody, LHDepth, RHDepth, HeadDepth };
