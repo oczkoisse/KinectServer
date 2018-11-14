@@ -105,6 +105,69 @@ namespace KSIM
             set { Interlocked.Exchange(ref lastTimestamp, value); }
         }
 
+        private void HandleRegistrationData(IAsyncResult res)
+        {
+            if (res != null)
+            {
+
+                object[] state = (object[])res.AsyncState;
+                TcpClient c = (TcpClient)state[0];
+                byte[] bytes = (byte[])state[1];
+
+                // Get a list of valid stream types from these 4 bytes
+
+                bool isWriter = GetActiveFrames(bytes, out List<Readers.FrameType> activeFrames);
+
+                // If its a writer, then it can't request streams. Essentially, requested streams will be ignored.
+                if (isWriter)
+                {
+                    lock (writers)
+                    {
+                        Trace.WriteLine(String.Format("Accepted writer connection from {0}", c.Client.RemoteEndPoint.ToString()));
+                        writers.Add(c);
+                    }
+                }
+                // If there are one or more valid stream requests
+                else if (activeFrames.Count >= 1)
+                {
+                    // If the request does not involve Audio
+                    if (!activeFrames.Contains(FrameType.Audio))
+                    {
+                        // Add the client to list of connected clients other than audio clients
+                        lock (connectedClients)
+                        {
+                            connectedClients.Add(c, activeFrames);
+                            Trace.WriteLine(String.Format("Accepted reader connection from {0}", c.Client.RemoteEndPoint.ToString()));
+                            foreach (var ft in activeFrames)
+                                Trace.WriteLine((int)ft);
+                        }
+                    }
+                    // If the request contains only 1 stream type which is Audio
+                    else if (activeFrames.Count == 1 && activeFrames[0] == FrameType.Audio)
+                    {
+                        lock (connectedAudioClients)
+                        {
+                            connectedAudioClients.Add(c);
+                            Trace.WriteLine(String.Format("Accepted reader connection from {0}", c.Client.RemoteEndPoint.ToString()));
+                            Trace.WriteLine((int)activeFrames[0]);
+                        }
+                    }
+                    else
+                    {
+                        // Reject as an invalid stream as the stream contains a combination of Audio/Speech with other stream types
+                        Trace.WriteLine(String.Format("Rejecting client {0} because it is not possible to combine Audio stream with other streams.", c.Client.RemoteEndPoint.ToString()));
+                        c.Close();
+                    }
+                }
+                else
+                {
+                    // Reject as no valid stream was identified
+                    Trace.WriteLine(String.Format("Rejecting client {0} because of an unrecognized stream type(s)", c.Client.RemoteEndPoint.ToString()));
+                    c.Close();
+                }
+            }
+        }
+
         /// <summary>
         /// Handles incoming client connections. The current implementation verifies these requests by
         /// reading first 4 bytes sent by the client, which are are validated by <see cref="GetActiveFrames(byte[])"/> into a list of stream types.
@@ -132,66 +195,16 @@ namespace KSIM
             if (c == null)
                 return;
 
+            var stream = c.GetStream();
+            if (stream != null)
+            {
+                byte[] bytes = new byte[4];
+                stream.BeginRead(bytes, 0, bytes.Length, HandleRegistrationData, new object[] { c, bytes });
+            }
+            
             // Else go back to accepting connections
             ContinueAcceptConnections();
-
-
-            // Read first four bytes of this client
-            byte[] requestedFrames = new byte[] { 0x0, 0x0, 0x0, 0x0 };
-            int bytesRead = c.GetStream().Read(requestedFrames, 0, 4);
-            Debug.Assert(bytesRead == 4);
-
-            // Get a list of valid stream types from these 4 bytes
-
-            bool isWriter = GetActiveFrames(requestedFrames, out List<Readers.FrameType> activeFrames);
             
-            // If its a writer, then it can't request streams. Essentially, requested streams will be ignored.
-            if (isWriter)
-            {
-                lock(writers)
-                {
-                    Trace.WriteLine(String.Format("Accepted writer connection from {0}", c.Client.RemoteEndPoint.ToString()));
-                    writers.Add(c);
-                }
-            }
-            // If there are one or more valid stream requests
-            else if (activeFrames.Count >= 1)
-            {
-                // If the request does not involve Audio
-                if (!activeFrames.Contains(FrameType.Audio))
-                {
-                    // Add the client to list of connected clients other than audio clients
-                    lock (connectedClients)
-                    {
-                        connectedClients.Add(c, activeFrames);
-                        Trace.WriteLine(String.Format("Accepted reader connection from {0}", c.Client.RemoteEndPoint.ToString()));
-                        foreach (var ft in activeFrames)
-                            Trace.WriteLine((int)ft);
-                    }
-                }
-                // If the request contains only 1 stream type which is Audio
-                else if (activeFrames.Count == 1 && activeFrames[0] == FrameType.Audio)
-                {
-                    lock (connectedAudioClients)
-                    {
-                        connectedAudioClients.Add(c);
-                        Trace.WriteLine(String.Format("Accepted reader connection from {0}", c.Client.RemoteEndPoint.ToString()));
-                        Trace.WriteLine((int)activeFrames[0]);
-                    }
-                }
-                else
-                {
-                    // Reject as an invalid stream as the stream contains a combination of Audio/Speech with other stream types
-                    Trace.WriteLine(String.Format("Rejecting client {0} because it is not possible to combine Audio stream with other streams.", c.Client.RemoteEndPoint.ToString()));
-                    c.Close();
-                }
-            }
-            else
-            {
-                // Reject as no valid stream was identified
-                Trace.WriteLine(String.Format("Rejecting client {0} because of an unrecognized stream type(s)", c.Client.RemoteEndPoint.ToString()));
-                c.Close();
-            }
         }
 
 
@@ -312,13 +325,7 @@ namespace KSIM
             }
         }
 
-        private void UpdateFramesWithWriterData(Dictionary<Readers.FrameType, Readers.Frame> frames)
-        {
-            foreach(Readers.Frame f in frames.Values)
-            {
-
-            }
-        }
+        
 
         private void Reader_MultiSourceFrameArrived(object sender, MultiSourceFrameArrivedEventArgs e)
         {
@@ -369,7 +376,11 @@ namespace KSIM
                             byte[] dataToSend = ms.ToArray();
                             try
                             {
-                                client.GetStream().Write(dataToSend, 0, dataToSend.Length);
+                                var stream = client.GetStream();
+                                if (stream != null)
+                                {
+                                    stream.BeginWrite(dataToSend, 0, dataToSend.Length, null, null);
+                                }
                             }
                             catch (IOException)
                             {
