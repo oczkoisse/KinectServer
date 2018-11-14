@@ -113,24 +113,44 @@ namespace KSIM.Readers
             }
         }
 
+        private void SerializeHeader(BinaryWriter writer)
+        {
+            writer.Write(0);
+            writer.Write(Timestamp);
+            writer.Write(1 << (int)Type);
+        }
+
+        public abstract void SerializeContent(BinaryWriter writer);
+
+        private void SerializeTail(BinaryWriter writer)
+        {
+            if (WriterData == null)
+                writer.Write(0);
+            else
+            {
+                writer.Write(WriterData.Length);
+                writer.Write(WriterData, 0, WriterData.Length);
+            }
+
+            // Rewind back to write the load size in the first 4 bytes
+            int loadSize = (int)writer.Seek(0, SeekOrigin.Current) - sizeof(int);
+            writer.Seek(0, SeekOrigin.Begin);
+            writer.Write(loadSize);
+            writer.Seek(0, SeekOrigin.End);
+        }
+
         // Note that serialization will follow little-endian format, even for network transfers
         // so write clients accordingly
-        public virtual void Serialize(Stream s)
+        public void Serialize(Stream s)
         {
-            if (s != null)
+            using (BinaryWriter writer = new BinaryWriter(s, Encoding.ASCII, true))
             {
-                using (BinaryWriter writer = new BinaryWriter(s))
-                {
-                    if (WriterData == null)
-                        writer.Write(0);
-                    else
-                    {
-                        writer.Write(WriterData.Length);
-                        writer.Write(WriterData, 0, WriterData.Length);
-                    }
-                }
+                SerializeHeader(writer);
+                SerializeContent(writer);
+                SerializeTail(writer);
             }
         }
+
             
         // Disposable pattern should always be implemented in base class
         protected abstract void Dispose(bool disposing);

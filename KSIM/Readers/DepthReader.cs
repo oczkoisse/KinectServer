@@ -82,7 +82,7 @@ namespace KSIM.Readers
             df.CopyFrameDataToArray(this.depthData);
         }
 
-        public override void Serialize(Stream s)
+        public override void SerializeContent(BinaryWriter writer)
         {
             // Format:
             // Load Size (4 bytes, signed) | Timestamp (8 bytes, signed) | Frame Type (4 bytes, bitset) | Width (4 bytes, signed) | Height (4 bytes, signed) | Depth Data (2 bytes * Width * Height, unsigned)
@@ -95,25 +95,11 @@ namespace KSIM.Readers
             // Depth Data: Depth data stored as one row following the other
 
             // Note that BinaryWriter is documented to write data in little-endian form only
-            using (BinaryWriter writer = new BinaryWriter(s))
-            {
-                int loadSize = 0;
-                writer.Write(loadSize);
-                writer.Write(Timestamp);
-                writer.Write(1 << (int)Type);
-                writer.Write(Width);
-                writer.Write(Height);
+            writer.Write(Width);
+            writer.Write(Height);
 
-                for (int i = 0; i < depthData.Length; i++)
-                    writer.Write(depthData[i]);
-
-                // Rewind back to write the load size in the first 4 bytes
-                loadSize = (int)writer.Seek(0, SeekOrigin.Current) - sizeof(int);
-                writer.Seek(0, SeekOrigin.Begin);
-                writer.Write(loadSize);
-                writer.Seek(0, SeekOrigin.End);
-            }
-            base.Serialize(s);
+            for (int i = 0; i < depthData.Length; i++)
+                writer.Write(depthData[i]);
         }
 
         protected override void Dispose(bool disposing)

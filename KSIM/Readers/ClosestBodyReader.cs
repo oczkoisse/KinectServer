@@ -187,7 +187,7 @@ namespace KSIM.Readers
             //Debug.WriteLine("Number of tracked bodies: {0}", trackedCount);
         }
 
-        public override void Serialize(Stream s)
+        public override void SerializeContent(BinaryWriter writer)
         {
             // Format:
             // Load Size (4 bytes, signed) | Timestamp (8 bytes, signed) | Frame Type (4 bytes, bitset) | Tracked Body Count (1 byte, unsigned)
@@ -211,55 +211,38 @@ namespace KSIM.Readers
             //     Joint Orientation W, X, Y, Z
 
             // Note that BinaryWriter is documented to write data in little-endian form only
-            using (BinaryWriter writer = new BinaryWriter(s))
+            writer.Write(TrackedCount);
+            writer.Write(Engaged);
+
+            if (Engaged)
             {
-                int loadSize = 0;
-                // Placeholder for load size to be filled in later
-                writer.Write(loadSize);
+                writer.Write(TrackingId);
 
-                writer.Write(Timestamp);
-                writer.Write(1 << (int)Type);
+                writer.Write((byte)HandLeftConfidence);
+                writer.Write((byte)HandLeftState);
 
-                writer.Write(TrackedCount);
-                writer.Write(Engaged);
+                writer.Write((byte)HandRightConfidence);
+                writer.Write((byte)HandRightState);
 
-                if (Engaged)
+                // Assume we'll always have orientation for a joint that has a position
+                foreach (JointType j in Joints.Keys)
                 {
-                    writer.Write(TrackingId);
+                    Joint joint = Joints[j];
+                    JointOrientation jointOrient = JointOrientations[j];
 
-                    writer.Write((byte)HandLeftConfidence);
-                    writer.Write((byte)HandLeftState);
+                    writer.Write((byte)j);
+                    writer.Write((byte)joint.TrackingState);
 
-                    writer.Write((byte)HandRightConfidence);
-                    writer.Write((byte)HandRightState);
-                    
-                    // Assume we'll always have orientation for a joint that has a position
-                    foreach (JointType j in Joints.Keys)
-                    {
-                        Joint joint = Joints[j];
-                        JointOrientation jointOrient = JointOrientations[j];
+                    writer.Write(joint.Position.X);
+                    writer.Write(joint.Position.Y);
+                    writer.Write(joint.Position.Z);
 
-                        writer.Write((byte)j);
-                        writer.Write((byte)joint.TrackingState);
-
-                        writer.Write(joint.Position.X);
-                        writer.Write(joint.Position.Y);
-                        writer.Write(joint.Position.Z);
-
-                        writer.Write(jointOrient.Orientation.W);
-                        writer.Write(jointOrient.Orientation.X);
-                        writer.Write(jointOrient.Orientation.Y);
-                        writer.Write(jointOrient.Orientation.Z);
-                    }
+                    writer.Write(jointOrient.Orientation.W);
+                    writer.Write(jointOrient.Orientation.X);
+                    writer.Write(jointOrient.Orientation.Y);
+                    writer.Write(jointOrient.Orientation.Z);
                 }
-
-                // Rewind back to write the load size in the first 4 bytes
-                loadSize = (int)writer.Seek(0, SeekOrigin.Current) - sizeof(int);
-                writer.Seek(0, SeekOrigin.Begin);
-                writer.Write(loadSize);
-                writer.Seek(0, SeekOrigin.End);
             }
-            base.Serialize(s);
         }
 
         protected override void Dispose(bool disposing)

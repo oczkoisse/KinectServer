@@ -312,6 +312,14 @@ namespace KSIM
             }
         }
 
+        private void UpdateFramesWithWriterData(Dictionary<Readers.FrameType, Readers.Frame> frames)
+        {
+            foreach(Readers.Frame f in frames.Values)
+            {
+
+            }
+        }
+
         private void Reader_MultiSourceFrameArrived(object sender, MultiSourceFrameArrivedEventArgs e)
         {
             MultiSourceFrame msf = e.FrameReference.AcquireFrame();

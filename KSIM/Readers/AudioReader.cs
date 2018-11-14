@@ -93,30 +93,15 @@ namespace KSIM.Readers
         }
             
            
-        public override void Serialize(Stream s)
+        public override void SerializeContent(BinaryWriter writer)
         {
-            using (BinaryWriter writer = new BinaryWriter(s))
+            // Note that each subframe is fixed size -- 1024 bytes
+            writer.Write(audioBuffer.Length);
+
+            for (int i = 0; i < audioBuffer.Length; i++)
             {
-                int loadSize = 0;
-                writer.Write(loadSize);
-                writer.Write(Timestamp);
-                writer.Write(1 << (int)Type);
-
-                // Note that each subframe is fixed size -- 1024 bytes
-                writer.Write(audioBuffer.Length);
-
-                for(int i = 0; i < audioBuffer.Length; i++)
-                {
-                    writer.Write(audioBuffer[i]);
-                }
-
-                // Rewind back to write the load size in the first 4 bytes
-                loadSize = (int)writer.Seek(0, SeekOrigin.Current) - sizeof(int);
-                writer.Seek(0, SeekOrigin.Begin);
-                writer.Write(loadSize);
-                writer.Seek(0, SeekOrigin.End);
+                writer.Write(audioBuffer[i]);
             }
-            // No writer data is allowed for AudioFrames
         }
 
         protected override void Dispose(bool disposing)

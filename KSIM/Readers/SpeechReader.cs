@@ -103,26 +103,11 @@ namespace KSIM.Readers
             return a_plus_b;
         }
            
-        public override void Serialize(Stream s)
+        public override void SerializeContent(BinaryWriter writer)
         {
-            using (BinaryWriter writer = new BinaryWriter(s))
-            {
-                int loadSize = 0;
-                writer.Write(loadSize);
-                writer.Write(Timestamp);
-                writer.Write(1 << (int)Type);
-
-                byte[] dataToBeWritten = Encoding.ASCII.GetBytes(command);
-                writer.Write(dataToBeWritten.Length);
-                writer.Write(dataToBeWritten);
-
-                // Rewind back to write the load size in the first 4 bytes
-                loadSize = (int)writer.Seek(0, SeekOrigin.Current) - sizeof(int);
-                writer.Seek(0, SeekOrigin.Begin);
-                writer.Write(loadSize);
-                writer.Seek(0, SeekOrigin.End);
-            }
-            base.Serialize(s);
+            byte[] commandBytes = Encoding.ASCII.GetBytes(command);
+            writer.Write(commandBytes.Length);
+            writer.Write(commandBytes);
         }
 
         protected override void Dispose(bool disposing)
