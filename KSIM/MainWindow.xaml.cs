@@ -8,22 +8,15 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Threading;
 using Microsoft.Speech.AudioFormat;
 using Microsoft.Speech.Recognition;
-using Microsoft.Speech.Synthesis;
 using System.Globalization;
+using System.Text;
+using System.Windows.Controls;
+using Microsoft.Speech.Recognition.SrgsGrammar;
+using Mono.Options;
 
 namespace KSIM
 {
@@ -37,9 +30,11 @@ namespace KSIM
         /// <summary>
         /// The port at which the application listens for incoming stream requests for Kinect clients
         /// </summary>
-        private const int PORT = 8000;
+        private static int PORT = 8000;
 
-        private static bool listenFromKinect = true;
+        private static bool listenFromKinect = false;
+        private string _grammarFile = "out.grxml";
+        private bool _show_help;
 
         /// <summary>
         /// Reference to the Kinect sensor. Needed to Close() at the application exit.
@@ -122,7 +117,7 @@ namespace KSIM
             {
                 c = server.EndAcceptTcpClient(res);
             }
-            catch(ObjectDisposedException e)
+            catch(ObjectDisposedException)
             {
                 Debug.Write("Server closed while still listening.");
             }
@@ -255,35 +250,36 @@ namespace KSIM
         public MainWindow()
         {
             String[] args = Environment.GetCommandLineArgs();
-            if (args.Length >= 3 && args[1] == "--listen")
+
+            var p = new OptionSet
             {
-                switch(args[2].ToLower())
                 {
-                    case "kinect":
-                    case "k":
-                        listenFromKinect = true;
-                        Debug.WriteLine("Listening from Kinect...");
-                        break;
-                
-                    case "microphone":
-                    case "m":
-                        listenFromKinect = false;
-                        Debug.WriteLine("Listening from microphone...");
-                        break;
-                    default:
-                        Console.WriteLine("Invalid --listen argument: " + args[2]);
-                        Environment.Exit(0);
-                        break;
+                    "k|kinect", "use kinect microphone",
+                    v => listenFromKinect = v != null
+                },
+                {
+                    "p=|port=", "port number to use to send kinect streams. (default: 8000)",
+                    v =>  PORT = v.Length > 0 ? Int32.Parse(v) : 8000
+                },
+                {
+                    "g=|grammar=", "grammar file name to use for speech (cfg or grxml, default: out.grxml).",
+                    v => this._grammarFile = v == null ?  "out.grxml" : v
+                },
+                {
+                    "h|help", "show this message",
+                    v => _show_help = v != null
                 }
-            }
-            else
+            };
+
+            p.Parse(args);
+            if (_show_help)
             {
-                if (listenFromKinect)
-                    Debug.WriteLine("Listening from Kinect...");
-                else
-                    Debug.WriteLine("Listening from microphone...");
+                Console.WriteLine ("Options:");
+                p.WriteOptionDescriptions(Console.Out);
+                Application.Current.Shutdown();
+                return;
             }
-                
+
             LastTimestamp = Int64.MinValue;
             bool success = InitializeKinect();
             if (success)
@@ -291,6 +287,44 @@ namespace KSIM
                 server.Start();
                 ContinueAcceptConnections();
                 InitializeComponent();
+                textBox.Clear();
+                textBox.AppendText(string.Format("App started at port {0} using {1} microphone and {2} grammar",
+                    PORT, listenFromKinect? "kinect" : "normal", _grammarFile));
+
+            }
+        }
+
+        class TextBoxWriter : TextWriter
+        {
+
+            private TextBox _outBox;
+            private StringSendDelegate _invoker;
+
+            private delegate void StringSendDelegate(string message);
+
+            public TextBoxWriter(TextBox box)
+            {
+                _outBox = box;
+                _invoker = SendString;
+            }
+
+            private void SendString(string message)
+            {
+                _outBox.AppendText(message);
+                _outBox.ScrollToEnd();
+            }
+
+
+            public override Encoding Encoding { get { return Encoding.UTF8;} }
+
+            public override void Write(string text)
+            {
+                _outBox.Dispatcher.Invoke(_invoker, text);
+            }
+
+            public override void WriteLine(string text)
+            {
+                _outBox.Dispatcher.Invoke(_invoker, text + Environment.NewLine);
             }
         }
 
@@ -423,6 +457,9 @@ namespace KSIM
         {
             var result = e.Result;
             var sr = (SpeechReader)KSIM.Readers.FrameType.Speech.GetReader();
+            textBox.AppendText($"Phrase \"{result.Text}\" (confidence: {result.Confidence})\n");
+            textBox.AppendText($"{result.Semantics["Tag"].Value},{result.Text}\n");
+            textBox.ScrollToEnd();
             sr.Store(result);
         }
 
@@ -474,7 +511,7 @@ namespace KSIM
                     throw new InvalidOperationException("Unable to initialize Kinect Audio, so can't listen from it");    
                 }
                 else
-                    InitializeSpeechEngine();
+                    InitializeSpeechEngine(_grammarFile);
 
                 sensor.Open();
                 multiSourceFrameReader.MultiSourceFrameArrived += Reader_MultiSourceFrameArrived;
@@ -508,19 +545,51 @@ namespace KSIM
             return false;
         }
 
-        private bool InitializeSpeechEngine()
+        static Grammar LoadGrammar(string grammarPathString, bool forceCompile)
         {
+            string compiledGrammarPathString;
+            string grammarExtension = Path.GetExtension(grammarPathString);
+            if (grammarExtension.Equals(".grxml", StringComparison.OrdinalIgnoreCase)) {
+                compiledGrammarPathString = Path.ChangeExtension(grammarPathString, "cfg");
+            } else if (grammarExtension.Equals(".cfg", StringComparison.OrdinalIgnoreCase)) {
+                compiledGrammarPathString = grammarPathString;
+            } else {
+                throw new FormatException("Grammar file format is unsupported: " + grammarExtension);
+            }
+
+            // skip cpmpilation if "cfg" grammar already exists
+            if (forceCompile || !File.Exists(compiledGrammarPathString))
+            {
+                FileStream fs = new FileStream(compiledGrammarPathString, FileMode.Create);
+                var srgs = new SrgsDocument(grammarPathString);
+                SrgsGrammarCompiler.Compile(srgs, fs);
+                fs.Close();
+            }
+
+            return new Grammar(compiledGrammarPathString);
+        }
+
+        private bool InitializeSpeechEngine(string grammarFileName)
+        {
+            if (!File.Exists(grammarFileName))
+            {
+                Console.Error.WriteLine ($"Cannot find the language model file: {grammarFileName}");
+                Application.Current.Shutdown();
+                return false;
+            }
             List<Grammar> grammars = null;
             if (listenFromKinect)
             {
                 RecognizerInfo ri = TryGetKinectRecognizer();
-                if (null != ri)
+                if (null == ri)
                 {
-                    speechEngine = new SpeechRecognitionEngine(ri.Id);
-                    speechEngine.SetInputToAudioStream(
-                    this.audioStream, new SpeechAudioFormatInfo(EncodingFormat.Pcm, 16000, 16, 1, 32000, 2, null));
-                    GetGrammars(ri.Culture, out grammars);
+                    Console.Error.WriteLine("Cannot initiate Kinect microphone, is a Kinect (v2) plugged in?");
+                    Application.Current.Shutdown();
+                    return false;
                 }
+                speechEngine = new SpeechRecognitionEngine(ri.Id);
+                speechEngine.SetInputToAudioStream(audioStream, new SpeechAudioFormatInfo(EncodingFormat.Pcm, 16000, 16, 1, 32000, 2, null));
+                grammars = GetGrammars(grammarFileName, ri.Culture);
             }
             else
             {
@@ -529,7 +598,7 @@ namespace KSIM
                 {
                     speechEngine = new SpeechRecognitionEngine(ci);
                     speechEngine.SetInputToDefaultAudioDevice();
-                    GetGrammars(ci, out grammars);
+                    grammars = GetGrammars(grammarFileName, ci);
                 }
             }
 
@@ -546,7 +615,23 @@ namespace KSIM
             return false;
         }
 
-        private void GetGrammars(CultureInfo ci, out List<Grammar> grammars)
+        private List<Grammar> GetGrammars(string grammarFileName, CultureInfo ci)
+        {
+            List<Grammar> grammars;
+            if (grammarFileName == null)
+            {
+                grammars = BuildDefaultGrammar(ci, out grammars);
+            }
+            else
+            {
+                grammars = new List<Grammar>();
+                grammars.Add(LoadGrammar(grammarFileName, true));
+            }
+
+            return grammars;
+        }
+
+        private List<Grammar> BuildDefaultGrammar(CultureInfo ci, out List<Grammar> grammars)
         {
             grammars = new List<Grammar>();
             var properties = new Choices();
@@ -646,6 +731,7 @@ namespace KSIM
             othersGrammarBuilder.Append(new SemanticResultKey("other", others));
 
             grammars.Add(new Grammar(othersGrammarBuilder));
+            return grammars;
         }
 
         

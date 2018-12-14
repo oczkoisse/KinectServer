@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Kinect;
 using System.Diagnostics;
 using System.Collections.Concurrent;
@@ -48,6 +44,8 @@ namespace KSIM.Readers
 
     class SpeechFrame : Frame
     {
+        private const string _commandDelimiter = "/";
+
         private bool disposed = false;
 
         private string command = "";
@@ -57,31 +55,31 @@ namespace KSIM.Readers
             get { return command.Length > 0; }
         }
 
-        private static String[] recognizedKeys = new String[] { "xDirection", "yDirection", "property", "demonstrative", "other", "action", "answer" };
         private static double phraseConfidence = 0.3;
-        private static double keyConfidence = 0.1;
 
         public SpeechFrame(RecognitionResult r)
         {
             this.Type = FrameType.Speech;
 
-            Debug.WriteLine("Phrase confidence: " + r.Semantics.Confidence);
+            Debug.WriteLine("Phrase \"{0}\" (confidence: {1})", r.Text, r.Confidence);
 
             if (r.Confidence >= phraseConfidence)
             {
-                foreach (String k in recognizedKeys)
+                // temporary stopgap to re-use voxsim side input symbols for the PDA
+                if ("never mind".Equals(r.Text))
                 {
-                    if (r.Semantics.ContainsKey(k))
-                    {
-                        Debug.WriteLine("Key confidence: " + r.Semantics[k].Confidence);
-                        if (r.Semantics[k].Confidence >= keyConfidence)
-                        {
-                            command = r.Semantics[k].Value.ToString();
-                            Debug.WriteLine(command);
-                        }
-                        break;
-                    }
-                }                
+                    command = string.Format("{0} {1}", r.Semantics["Tag"].Value, r.Text);
+                }
+                else if (r.Text.Contains(" "))
+                {
+                    command = string.Format("{0},{1}", r.Semantics["Tag"].Value, r.Text);
+                }
+                else
+                {
+                    command = string.Format("{0} {1}", r.Semantics["Tag"].Value, r.Text);
+                }
+                Debug.WriteLine(command);
+
             }
         }
 
@@ -94,7 +92,7 @@ namespace KSIM.Readers
         {
             SpeechFrame a_plus_b = new SpeechFrame();
             if (a.HasData && b.HasData)
-                a_plus_b.command = a.command + ", " + b.command;
+                a_plus_b.command = a.command + _commandDelimiter + b.command;
             else if (a.HasData)
                 a_plus_b.command = a.command;
             else
