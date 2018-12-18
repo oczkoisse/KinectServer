@@ -27,12 +27,13 @@ namespace KSIM.Readers
         public override Frame Read(MultiSourceFrame f)
         {
             // Thread safe to call Read from multiple threads
-            SpeechFrame outFrame = new SpeechFrame(), tempFrame;
+            SpeechFrame outFrame = new SpeechFrame();
             
-            while(listSpeechFrame.TryDequeue(out tempFrame))
+            while(listSpeechFrame.TryDequeue(out SpeechFrame tempFrame))
             {
                 outFrame += tempFrame;
             }
+
             return outFrame;
         }
 

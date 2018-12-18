@@ -196,15 +196,28 @@ namespace KSIM
             if (!e.OperationSucceeded)
             {
                 Connection conn = e.GetConnection();
-                // TODO: Remove connection
+                RemoveConnection(conn);
             }
+        }
+
+        private void RemoveConnection(Connection conn)
+        {
+            lock (connectedAudioClients)
+            {
+                connectedAudioClients.Remove(conn);
+            }
+            lock (connectedClients)
+            {
+                connectedClients.Remove(conn);
+            }
+            conn.Close();
         }
 
         private void OnReceived(object sender, ReceivedEventArgs e)
         {
+            Connection conn = e.GetConnection();
             if (e.OperationSucceeded)
             {
-                Connection conn = e.GetConnection();
                 Packet packet = e.GetPacket();
 
                 using (MemoryStream ms = new MemoryStream(packet.Data.Array))
@@ -214,22 +227,26 @@ namespace KSIM
                         // Length isn't needed actually
                         // but need to read to advance the stream
                         int length = br.ReadInt32();
-
-                        MessageType msgType = (MessageType) br.ReadByte();
-
-                        switch(msgType)
+                        if (length >= 1)
                         {
-                            case MessageType.RECOGNIZER_REG:
-                                HandleRecognizerRegistration(conn, br);
-                                break;
-                            case MessageType.VOXSIM_REG:
-                                break;
-                            case MessageType.VOXSIM_PASS:
-                                break;
+                            MessageType msgType = (MessageType)br.ReadByte();
+                            switch (msgType)
+                            {
+                                case MessageType.RECOGNIZER_REG:
+                                    HandleRecognizerRegistration(conn, br);
+                                    break;
+                                case MessageType.VOXSIM_REG:
+                                    break;
+                                case MessageType.VOXSIM_PASS:
+                                    break;
+                            }
                         }
                     }
                 }
-                
+            }
+            else
+            {
+                RemoveConnection(conn);   
             }
         }
 
