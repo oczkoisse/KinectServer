@@ -33,7 +33,7 @@ namespace KSIM
         private static int PORT = 8000;
 
         private static bool listenFromKinect = false;
-        private string _grammarFile = "out.grxml";
+        private string _grammarFile = "defaultGrammar.grxml";
         private bool _show_help;
 
         /// <summary>
@@ -262,8 +262,8 @@ namespace KSIM
                     v =>  PORT = v.Length > 0 ? Int32.Parse(v) : 8000
                 },
                 {
-                    "g=|grammar=", "grammar file name to use for speech (cfg or grxml, default: out.grxml).",
-                    v => this._grammarFile = v == null ?  "out.grxml" : v
+                    "g=|grammar=", "grammar file name to use for speech (cfg or grxml, default: defaultGrammar.grxml).",
+                    v => this._grammarFile = v == null ?  "defaultGrammar.grxml" : v
                 },
                 {
                     "h|help", "show this message",
