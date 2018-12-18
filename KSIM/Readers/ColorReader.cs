@@ -1,14 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Kinect;
-using System.Windows.Media.Imaging;
 using System.Windows.Media;
-using System.Windows;
-using System.Runtime.InteropServices;
 
 namespace KSIM.Readers
 {
@@ -74,8 +67,6 @@ namespace KSIM.Readers
             {
                 using (BinaryWriter writer = new BinaryWriter(s))
                 {
-                    int loadSize = 0;
-                    writer.Write(loadSize);
                     writer.Write(Timestamp);
                     writer.Write(1 << (int)Type);
 
@@ -84,12 +75,6 @@ namespace KSIM.Readers
                     writer.Write(Height);
                     
                     writer.Write(colorData);
-                    
-                    // Rewind back to write the load size in the first 4 bytes
-                    loadSize = (int)writer.Seek(0, SeekOrigin.Current) - sizeof(int);
-                    writer.Seek(0, SeekOrigin.Begin);
-                    writer.Write(loadSize);
-                    writer.Seek(0, SeekOrigin.End);
                 }
             }
 
