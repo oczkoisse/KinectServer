@@ -17,15 +17,15 @@ def connect():
     try:
         sock.connect((src_addr, src_port))
     except:
-        print "Error connecting to {}:{}".format(src_addr, src_port)
+        print("Error connecting to {}:{}".format(src_addr, src_port))
         return None
     try:
-		print "Sending stream info"
-		sock.sendall(struct.pack('<i', stream_id));
+        print("Sending stream info")
+        sock.sendall(struct.pack('<iBi', 5, 1, stream_id));
     except:
-        print "Error: Stream rejected"
+        print("Error: Stream rejected")
         return None
-    print "Successfully connected to host"
+    print("Successfully connected to host")
     return sock
 
 
@@ -92,13 +92,13 @@ if __name__ == '__main__':
             break
         
         timestamp, frame_type, tracked_body_count, engaged = decode_frame(f)[:4]
-        #print timestamp, frame_type, tracked_body_count, 'Engaged' if engaged else 'Not Engaged'
-        #print "\n\n"
+        print(timestamp, frame_type, tracked_body_count, 'Engaged' if engaged else 'Not Engaged')
+        print("\n\n")
 
         count += 1
         if count == 100:
-            print '='*30
-            print 'FPS: ', 100.0 / (time.time() - start_time)
-            print '='*30
+            print('='*30)
+            print('FPS: ', 100.0 / (time.time() - start_time))
+            print('='*30)
             start_time = time.time()
             count = 0
