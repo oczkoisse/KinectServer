@@ -20,15 +20,15 @@ def connect():
     try:
         sock.connect((src_addr, src_port))
     except:
-        print "Error connecting to {}:{}".format(src_addr, src_port)
+        print("Error connecting to {}:{}".format(src_addr, src_port))
         return None
     try:
-		print "Sending stream info"
-		sock.sendall(struct.pack('<i', stream_id));
+        print("Sending stream info")
+        sock.sendall(struct.pack('<iBi', 5, 1, stream_id));
     except:
-        print "Error: Stream rejected"
+        print("Error: Stream rejected")
         return None
-    print "Successfully connected to host"
+    print("Successfully connected to host")
     return sock
     
 
@@ -85,18 +85,18 @@ if __name__ == '__main__':
             s.close()
             break
         timestamp, frame_type, width, height, posx, posy, depth_data = decode_frame(f)
-        #print timestamp, frame_type, width, height
-        #print "\n\n"
+        #print(timestamp, frame_type, width, height)
+        #print("\n\n")
         
         count += 1
         if count == 100:
-            print '='*30
-            print 'FPS: ', 100.0 / (time.time() - start_time)
-            print '='*30
+            print('='*30)
+            print('FPS: ', 100.0 / (time.time() - start_time))
+            print('='*30)
             start_time = time.time()
             count = 0
             
-        if do_plot and i % 20 == 0 and height*width > 0:
+        if do_plot and count % 20 == 0 and height*width > 0:
             image = np.array(depth_data).reshape((height, width))
             im = plt.imshow(image, cmap='gray')
             plt.show()

@@ -20,19 +20,20 @@ def connect():
     try:
         sock.connect((src_addr, src_port))
     except:
-        print "Error connecting to {}:{}".format(src_addr, src_port)
+        print("Error connecting to {}:{}".format(src_addr, src_port))
         return None
     try:
-		print "Sending stream info"
-		sock.sendall(struct.pack('<i', stream_id));
+        print("Sending stream info")
+        sock.sendall(struct.pack('<iBi', 5, 1, stream_id));
     except:
-        print "Error: Stream rejected"
+        print("Error: Stream rejected")
         return None
-    print "Successfully connected to host"
+    print("Successfully connected to host")
     return sock
     
 
 # Timestamp | frame type | width | height | depth_data
+
 def decode_frame(raw_frame):
     
     # Expect little endian byte order
@@ -68,14 +69,13 @@ def recv_depth_frame(sock):
     return recv_all(sock, frame_size) 
     
 
-if __name__ == '__main__':
-
+if __name__ == '__main__': 
     s = connect()
     if s is None:
         sys.exit(0)
-    
+        
     do_plot = True if len(sys.argv) > 1 and sys.argv[1] == '--plot' else False
-
+    
     start_time = time.time()
     count = 0
     while True:
@@ -84,20 +84,19 @@ if __name__ == '__main__':
         except:
             s.close()
             break
-        
-        timestamp, frame_type, width, height = decode_frame(f)[:4]
-        #print timestamp, frame_type, width, height
-        #print "\n\n"
+        timestamp, frame_type, width, height, posx, posy, depth_data = decode_frame(f)
+        #print(timestamp, frame_type, width, height)
+        #print("\n\n")
         
         count += 1
         if count == 100:
-            print '='*30
-            print 'FPS: ', 100.0 / (time.time() - start_time)
-            print '='*30
+            print('='*30)
+            print('FPS: ', 100.0 / (time.time() - start_time))
+            print('='*30)
             start_time = time.time()
             count = 0
-                
-        if do_plot and i % 20 == 0 and height*width > 0:
+            
+        if do_plot and count % 20 == 0 and height*width > 0:
             image = np.array(depth_data).reshape((height, width))
             im = plt.imshow(image, cmap='gray')
             plt.show()
