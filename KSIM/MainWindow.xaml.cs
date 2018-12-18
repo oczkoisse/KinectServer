@@ -30,11 +30,11 @@ namespace KSIM
         /// <summary>
         /// The port at which the application listens for incoming stream requests for Kinect clients
         /// </summary>
-        private static int PORT = 8000;
+        private static int port = 8000;
 
         private static bool listenFromKinect = false;
+
         private string _grammarFile = "defaultGrammar.grxml";
-        private bool _show_help;
 
         /// <summary>
         /// Reference to the Kinect sensor. Needed to Close() at the application exit.
@@ -44,7 +44,7 @@ namespace KSIM
         /// <summary>
         /// The server object to listen for incoming client requests
         /// </summary>
-        private TcpListener server = new TcpListener(IPAddress.Any, PORT);
+        private TcpListener server = new TcpListener(IPAddress.Any, port);
         /// <summary>
         /// A dictionary for holding stream types subscribed by each client. The subscribed streams should not contain Audio or Speech
         /// </summary>
@@ -250,7 +250,8 @@ namespace KSIM
         public MainWindow()
         {
             String[] args = Environment.GetCommandLineArgs();
-
+            
+            bool showOptions = false;
             var p = new OptionSet
             {
                 {
@@ -259,7 +260,7 @@ namespace KSIM
                 },
                 {
                     "p=|port=", "port number to use to send kinect streams. (default: 8000)",
-                    v =>  PORT = v.Length > 0 ? Int32.Parse(v) : 8000
+                    v =>  port = Int32.Parse(v)
                 },
                 {
                     "g=|grammar=", "grammar file name to use for speech (cfg or grxml, default: defaultGrammar.grxml).",
@@ -267,18 +268,38 @@ namespace KSIM
                 },
                 {
                     "h|help", "show this message",
-                    v => _show_help = v != null
+                    v => showOptions = v != null
                 }
             };
 
-            p.Parse(args);
-            if (_show_help)
+            try
             {
-                Console.WriteLine ("Options:");
+                p.Parse(args);
+            }
+            catch (OptionException e)
+            {
+                Console.Write("Error: ");
+                Console.WriteLine(e.Message);
+                Application.Current.Shutdown();
+                return;
+            }
+
+            if (showOptions)
+            {
+                Console.WriteLine("Options:");
                 p.WriteOptionDescriptions(Console.Out);
                 Application.Current.Shutdown();
                 return;
             }
+
+            if (!File.Exists(_grammarFile))
+            {
+                Console.WriteLine("Error: {0}", @"Unable to find grammar file {_grammarFile}");
+                Application.Current.Shutdown();
+                return;
+            }
+
+
 
             LastTimestamp = Int64.MinValue;
             bool success = InitializeKinect();
@@ -289,7 +310,7 @@ namespace KSIM
                 InitializeComponent();
                 textBox.Clear();
                 textBox.AppendText(string.Format("App started at port {0} using {1} microphone and {2} grammar",
-                    PORT, listenFromKinect? "kinect" : "normal", _grammarFile));
+                    port, listenFromKinect? "kinect" : "normal", _grammarFile));
 
             }
         }
@@ -508,11 +529,15 @@ namespace KSIM
                 bool audioInitialized = InitializeKinectAudio();
                 if (!audioInitialized && listenFromKinect)
                 {
-                    throw new InvalidOperationException("Unable to initialize Kinect Audio, so can't listen from it");    
+                    throw new Exception("Unable to initialize Kinect Audio, so can't listen from it");
                 }
-                else
-                    InitializeSpeechEngine(_grammarFile);
 
+                if (!InitializeSpeechEngine(_grammarFile))
+                {
+                    throw new Exception("Unable to initialize Speech Engine");
+                }
+
+                
                 sensor.Open();
                 multiSourceFrameReader.MultiSourceFrameArrived += Reader_MultiSourceFrameArrived;
                 return true;
@@ -547,6 +572,11 @@ namespace KSIM
 
         static Grammar LoadGrammar(string grammarPathString, bool forceCompile)
         {
+            if (grammarPathString == null)
+            {
+                return null;
+            }
+
             string compiledGrammarPathString;
             string grammarExtension = Path.GetExtension(grammarPathString);
             if (grammarExtension.Equals(".grxml", StringComparison.OrdinalIgnoreCase)) {
@@ -571,171 +601,40 @@ namespace KSIM
 
         private bool InitializeSpeechEngine(string grammarFileName)
         {
-            if (!File.Exists(grammarFileName))
-            {
-                Console.Error.WriteLine ($"Cannot find the language model file: {grammarFileName}");
-                Application.Current.Shutdown();
-                return false;
-            }
-            List<Grammar> grammars = null;
-            if (listenFromKinect)
-            {
-                RecognizerInfo ri = TryGetKinectRecognizer();
-                if (null == ri)
-                {
-                    Console.Error.WriteLine("Cannot initiate Kinect microphone, is a Kinect (v2) plugged in?");
-                    Application.Current.Shutdown();
-                    return false;
-                }
-                speechEngine = new SpeechRecognitionEngine(ri.Id);
-                speechEngine.SetInputToAudioStream(audioStream, new SpeechAudioFormatInfo(EncodingFormat.Pcm, 16000, 16, 1, 32000, 2, null));
-                grammars = GetGrammars(grammarFileName, ri.Culture);
-            }
-            else
-            {
-                CultureInfo ci = new CultureInfo("en-us");
-                if (ci != null)
-                {
-                    speechEngine = new SpeechRecognitionEngine(ci);
-                    speechEngine.SetInputToDefaultAudioDevice();
-                    grammars = GetGrammars(grammarFileName, ci);
-                }
-            }
+            Grammar g = LoadGrammar(grammarFileName, true);
 
-            if (grammars.Count > 0)
+            if (g != null)
             {
-                foreach (Grammar g in grammars)
+                if (listenFromKinect)
                 {
-                    speechEngine.LoadGrammar(g);
+                    RecognizerInfo ri = TryGetKinectRecognizer();
+                    if (null == ri)
+                    {
+                        Console.Error.WriteLine("Cannot initiate Kinect microphone, is a Kinect (v2) plugged in?");
+                        return false;
+                    }
+                    speechEngine = new SpeechRecognitionEngine(ri.Id);
+                    speechEngine.SetInputToAudioStream(audioStream, new SpeechAudioFormatInfo(EncodingFormat.Pcm, 16000, 16, 1, 32000, 2, null));
                 }
+                else
+                {
+                    CultureInfo ci = new CultureInfo("en-US");
+                    if (ci != null)
+                    {
+                        speechEngine = new SpeechRecognitionEngine(ci);
+                        speechEngine.SetInputToDefaultAudioDevice();
+                    }
+                }
+
+                speechEngine.LoadGrammar(g);
                 speechEngine.RecognizeAsync(RecognizeMode.Multiple);
                 speechEngine.SpeechRecognized += Reader_SpeechRecognized;
                 return true;
             }
-            return false;
-        }
-
-        private List<Grammar> GetGrammars(string grammarFileName, CultureInfo ci)
-        {
-            List<Grammar> grammars;
-            if (grammarFileName == null)
-            {
-                grammars = BuildDefaultGrammar(ci, out grammars);
-            }
             else
-            {
-                grammars = new List<Grammar>();
-                grammars.Add(LoadGrammar(grammarFileName, true));
-            }
-
-            return grammars;
+                return false;
         }
-
-        private List<Grammar> BuildDefaultGrammar(CultureInfo ci, out List<Grammar> grammars)
-        {
-            grammars = new List<Grammar>();
-            var properties = new Choices();
-            // Colors
-            properties.Add(new SemanticResultValue("red", "RED"));
-            properties.Add(new SemanticResultValue("green", "GREEN"));
-            properties.Add(new SemanticResultValue("yellow", "YELLOW"));
-            properties.Add(new SemanticResultValue("purple", "PURPLE"));
-            properties.Add(new SemanticResultValue("black", "BLACK"));
-            properties.Add(new SemanticResultValue("white", "WHITE"));
-            properties.Add(new SemanticResultValue("orange", "ORANGE"));
-            // Size
-            properties.Add(new SemanticResultValue("big", "BIG"));
-            properties.Add(new SemanticResultValue("small", "SMALL"));
-
         
-            var refs = new Choices("one", "block");
-
-
-            var propertiesGrammarBuilder = new GrammarBuilder { Culture = ci };
-            propertiesGrammarBuilder.Append(new SemanticResultKey("property", properties));
-            propertiesGrammarBuilder.Append(refs);
-
-            grammars.Add(new Grammar(propertiesGrammarBuilder));
-
-            // Locations
-            var xLocationGrammarBuilder = new GrammarBuilder { Culture = ci };
-
-            var xDirections = new Choices();
-            xDirections.Add(new SemanticResultValue("left", "LEFT"));
-            xDirections.Add(new SemanticResultValue("right", "RIGHT"));
-
-            xLocationGrammarBuilder.Append("on");
-            xLocationGrammarBuilder.Append("the");
-            xLocationGrammarBuilder.Append(new SemanticResultKey("xDirection", xDirections));
-
-            grammars.Add(new Grammar(xLocationGrammarBuilder));
-
-            var yLocationGrammarBuilder = new GrammarBuilder { Culture = ci };
-
-            var yDirections = new Choices();
-            yDirections.Add(new SemanticResultValue("front", "FRONT"));
-            yDirections.Add(new SemanticResultValue("back", "BACK"));
-
-            yLocationGrammarBuilder.Append("at");
-            yLocationGrammarBuilder.Append("the");
-            yLocationGrammarBuilder.Append(new SemanticResultKey("yDirection", yDirections));
-
-
-            grammars.Add(new Grammar(yLocationGrammarBuilder));
-
-            // Answers yes/no
-            var answersGrammarBuilder = new GrammarBuilder { Culture = ci };
-            var answers = new Choices();
-            answers.Add(new SemanticResultValue("yes", "YES"));
-            answers.Add(new SemanticResultValue("yeah", "YES"));
-            answers.Add(new SemanticResultValue("please", "YES"));
-            answers.Add(new SemanticResultValue("no", "NO"));
-            //answers.Add(new SemanticResultValue("nothing", "NOTHING"));
-            answers.Add(new SemanticResultValue("never mind", "NEVERMIND"));
-
-            answersGrammarBuilder.Append(new SemanticResultKey("answer", answers));
-
-            grammars.Add(new Grammar(answersGrammarBuilder));
-
-            // Actions 
-            var actionsGrammarBuilder = new GrammarBuilder { Culture = ci };
-            var actions = new Choices();
-            actions.Add(new SemanticResultValue("grab", "GRAB"));
-            actions.Add(new SemanticResultValue("lift", "LIFT"));
-            actions.Add(new SemanticResultValue("push", "PUSH"));
-            actions.Add(new SemanticResultValue("put", "PUT"));
-
-            actionsGrammarBuilder.Append(new SemanticResultKey("action", actions));
-
-            grammars.Add(new Grammar(actionsGrammarBuilder));
-
-
-            // Demonstratives
-            var demonstrativesGrammarBuilder = new GrammarBuilder { Culture = ci };
-            var demonstratives = new Choices();
-            demonstratives.Add(new SemanticResultValue("this", "THIS"));
-            demonstratives.Add(new SemanticResultValue("that", "THAT"));
-
-            demonstrativesGrammarBuilder.Append(new SemanticResultKey("demonstrative", demonstratives));
-            demonstrativesGrammarBuilder.Append(refs);
-
-            grammars.Add(new Grammar(demonstrativesGrammarBuilder));
-
-            // Others
-            var othersGrammarBuilder = new GrammarBuilder { Culture = ci };
-            var others = new Choices();
-            others.Add(new SemanticResultValue("there", "THERE"));
-            others.Add(new SemanticResultValue("what", "WHAT"));
-            others.Add(new SemanticResultValue("learn", "LEARN"));
-
-            othersGrammarBuilder.Append(new SemanticResultKey("other", others));
-
-            grammars.Add(new Grammar(othersGrammarBuilder));
-            return grammars;
-        }
-
-        
-
         private void Window_Closed(object sender, EventArgs e)
         {
             lock (connectedClients)
