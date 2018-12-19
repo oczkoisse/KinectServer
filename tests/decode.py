@@ -38,7 +38,6 @@ def _decode_tail(raw_frame, offset):
     writer_data_length, = struct.unpack_from(endianness + writer_header_format, raw_frame, writer_header_offset)
     
     writer_data_offset = writer_header_offset + struct.calcsize(writer_header_format)
-    print(writer_data_length)
     if writer_data_length > 0:
         writer_data_format = "{}s".format(writer_data_length)
         writer_data, = struct.unpack_from(endianness + writer_data_format, raw_frame, writer_data_offset)
