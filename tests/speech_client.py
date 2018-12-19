@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 
-import socket, sys, struct
+import socket
+import sys
+import struct
+from decode import read_frame
 
-src_addr = 'localhost'
+src_addr = 'cwc1.cs.colostate.edu'
 src_port = 8000
 
 stream_id = 4
@@ -22,7 +25,7 @@ def connect():
         return None
     try:
         print("Sending stream info")
-        sock.sendall(struct.pack('<iBi', 5, 1, stream_id));
+        sock.sendall(struct.pack('<iBi', 5, 1, stream_id))
     except:
         print("Error: Stream rejected")
         return None
@@ -31,48 +34,27 @@ def connect():
 
 
 # Timestamp | frame type | command_length | command
-def decode_frame(raw_frame):
-    # Expect little endian byte order
+
+def decode_content(raw_frame, offset):
+    """
+    raw_frame: frame starting from 4 to end (4 for length)
+    offset: index where header ends  # header is header_l, timestamp, frame_type
+    """
     endianness = "<"
 
-    # In each frame, a header is transmitted
-    # Timestamp | frame type | command_length
-    header_format = "qii"
+    content_header_format = "i"  # command_length
+    content_header_size = struct.calcsize(endianness + content_header_format)
+    content_header, = struct.unpack_from(endianness + content_header_format, raw_frame, offset)
 
-    header_size = struct.calcsize(endianness + header_format)
-    header = struct.unpack(endianness + header_format, raw_frame[:header_size])
-
-    timestamp, frame_type, command_length = header
-
-    # print timestamp, frame_type, command_length
-
+    command_length = content_header
     command_format = str(command_length) + "s"
 
-    command = struct.unpack_from(endianness + command_format, raw_frame, header_size)[0]
+    command = struct.unpack_from(endianness + command_format, raw_frame, offset + content_header_size)[0]
     command = command.decode('ascii')
 
-    content_size = header_size + struct.calcsize(endianness + command_format)
-
-    return (timestamp, frame_type, command)
-
-
-def recv_all(sock, size):
-    result = b''
-    while len(result) < size:
-        data = sock.recv(size - len(result))
-        if not data:
-            raise EOFError("Error: Received only {} bytes into {} byte message".format(len(data), size))
-        result += data
-    return result
-
-
-def recv_speech_frame(sock):
-    """
-    Experimental function to read each stream frame from the server
-    """
-    (frame_size,) = struct.unpack("<i", recv_all(sock, 4))
-    # print frame_size
-    return recv_all(sock, frame_size)
+    offset = offset + content_header_size + struct.calcsize(
+        endianness + command_format)  # new offset from where tail starts
+    return (command_length, command), offset
 
 
 if __name__ == '__main__':
@@ -83,11 +65,11 @@ if __name__ == '__main__':
 
     while True:
         try:
-            f = recv_speech_frame(s)
+            (timestamp, frame_type), (command_length, command), (writer_data,) = read_frame(s, decode_content)
         except:
             s.close()
             break
-        timestamp, frame_type, command = decode_frame(f)
-        if len(command) > 0:
-            print(timestamp, frame_type, command)
+
+        if len(command) > 0 or len(writer_data) > 0:
+            print("{:<20d} {:<4d} '{}' '{}'".format(timestamp, frame_type, command, writer_data.decode('ascii')))
             print("\n\n")
