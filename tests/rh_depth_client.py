@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 src_addr = 'localhost'
 src_port = 8000
 
-stream_id = 128;
+stream_id = 128
 
 def connect():
     """

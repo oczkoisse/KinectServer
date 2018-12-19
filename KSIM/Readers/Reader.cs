@@ -2,6 +2,8 @@
 using Microsoft.Kinect;
 using System.IO;
 using Microsoft.Speech.Recognition;
+using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 namespace KSIM.Readers
 {
@@ -64,6 +66,8 @@ namespace KSIM.Readers
 
     public abstract class Frame : IDisposable
     {
+        public byte[] Affix;
+
         private int width = 0, height = 0;
 
         public int Width
@@ -96,9 +100,7 @@ namespace KSIM.Readers
             set { timestamp = value; }
         }
 
-        // Note that serialization will follow little-endian format, even for network transfers
-        // so write clients accordingly
-        public abstract void Serialize(Stream stream);
+        
         
         // Disposable pattern should always be implemented in base class
         protected abstract void Dispose(bool disposing);
@@ -110,5 +112,38 @@ namespace KSIM.Readers
         }
         // Disposable pattern ends
 
+        protected virtual void SerializeHeader(BinaryWriter writer)
+        {
+            writer.Write(Timestamp);
+            writer.Write(1 << (int)Type);
+        }
+
+
+        protected abstract void SerializeMiddle(BinaryWriter writer);
+
+        protected virtual void SerializeTail(BinaryWriter writer)
+        {
+            if (Affix != null)
+            {
+                writer.Write(Affix.Length);
+                writer.Write(Affix);
+            }
+            else
+            {
+                writer.Write(0);
+            }
+        }
+
+        // Note that serialization will follow little-endian format, even for network transfers
+        // so write clients accordingly
+        public void Serialize(Stream stream)
+        {
+            using (BinaryWriter writer = new BinaryWriter(stream))
+            {
+                SerializeHeader(writer);
+                SerializeMiddle(writer);
+                SerializeTail(writer);
+            }
+        }
     }
 }

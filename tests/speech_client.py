@@ -5,7 +5,8 @@ import socket, sys, struct
 src_addr = 'localhost'
 src_port = 8000
 
-stream_id = 4;
+stream_id = 4
+
 
 def connect():
     """
@@ -28,28 +29,32 @@ def connect():
     print("Successfully connected to host")
     return sock
 
+
 # Timestamp | frame type | command_length | command
 def decode_frame(raw_frame):
-    
     # Expect little endian byte order
     endianness = "<"
 
     # In each frame, a header is transmitted
     # Timestamp | frame type | command_length
     header_format = "qii"
-    
+
     header_size = struct.calcsize(endianness + header_format)
     header = struct.unpack(endianness + header_format, raw_frame[:header_size])
 
     timestamp, frame_type, command_length = header
-    
-    #print timestamp, frame_type, command_length
-    
+
+    # print timestamp, frame_type, command_length
+
     command_format = str(command_length) + "s"
-    
+
     command = struct.unpack_from(endianness + command_format, raw_frame, header_size)[0]
     command = command.decode('ascii')
+
+    content_size = header_size + struct.calcsize(endianness + command_format)
+
     return (timestamp, frame_type, command)
+
 
 def recv_all(sock, size):
     result = b''
@@ -60,21 +65,22 @@ def recv_all(sock, size):
         result += data
     return result
 
+
 def recv_speech_frame(sock):
     """
     Experimental function to read each stream frame from the server
     """
     (frame_size,) = struct.unpack("<i", recv_all(sock, 4))
-    #print frame_size
-    return recv_all(sock, frame_size) 
-    
+    # print frame_size
+    return recv_all(sock, frame_size)
+
 
 if __name__ == '__main__':
 
     s = connect()
     if s is None:
         sys.exit(0)
-    
+
     while True:
         try:
             f = recv_speech_frame(s)

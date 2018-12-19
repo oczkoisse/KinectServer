@@ -183,7 +183,7 @@ namespace KSIM.Readers
             //Debug.WriteLine("Number of tracked bodies: {0}", trackedCount);
         }
 
-        public override void Serialize(Stream s)
+        protected override void SerializeMiddle(BinaryWriter writer)
         {
             // Format:
             // Load Size (4 bytes, signed) | Timestamp (8 bytes, signed) | Frame Type (4 bytes, bitset) | Tracked Body Count (1 byte, unsigned)
@@ -207,42 +207,36 @@ namespace KSIM.Readers
             //     Joint Orientation W, X, Y, Z
 
             // Note that BinaryWriter is documented to write data in little-endian form only
-            using (BinaryWriter writer = new BinaryWriter(s))
+            writer.Write(TrackedCount);
+            writer.Write(Engaged);
+
+            if (Engaged)
             {
-                writer.Write(Timestamp);
-                writer.Write(1 << (int)Type);
+                writer.Write(TrackingId);
 
-                writer.Write(TrackedCount);
-                writer.Write(Engaged);
+                writer.Write((byte)HandLeftConfidence);
+                writer.Write((byte)HandLeftState);
 
-                if (Engaged)
+                writer.Write((byte)HandRightConfidence);
+                writer.Write((byte)HandRightState);
+
+                // Assume we'll always have orientation for a joint that has a position
+                foreach (JointType j in Joints.Keys)
                 {
-                    writer.Write(TrackingId);
+                    Joint joint = Joints[j];
+                    JointOrientation jointOrient = JointOrientations[j];
 
-                    writer.Write((byte)HandLeftConfidence);
-                    writer.Write((byte)HandLeftState);
+                    writer.Write((byte)j);
+                    writer.Write((byte)joint.TrackingState);
 
-                    writer.Write((byte)HandRightConfidence);
-                    writer.Write((byte)HandRightState);
-                    
-                    // Assume we'll always have orientation for a joint that has a position
-                    foreach (JointType j in Joints.Keys)
-                    {
-                        Joint joint = Joints[j];
-                        JointOrientation jointOrient = JointOrientations[j];
+                    writer.Write(joint.Position.X);
+                    writer.Write(joint.Position.Y);
+                    writer.Write(joint.Position.Z);
 
-                        writer.Write((byte)j);
-                        writer.Write((byte)joint.TrackingState);
-
-                        writer.Write(joint.Position.X);
-                        writer.Write(joint.Position.Y);
-                        writer.Write(joint.Position.Z);
-
-                        writer.Write(jointOrient.Orientation.W);
-                        writer.Write(jointOrient.Orientation.X);
-                        writer.Write(jointOrient.Orientation.Y);
-                        writer.Write(jointOrient.Orientation.Z);
-                    }
+                    writer.Write(jointOrient.Orientation.W);
+                    writer.Write(jointOrient.Orientation.X);
+                    writer.Write(jointOrient.Orientation.Y);
+                    writer.Write(jointOrient.Orientation.Z);
                 }
             }
         }

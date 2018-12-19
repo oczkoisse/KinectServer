@@ -15,6 +15,7 @@ using System.Windows.Controls;
 using Microsoft.Speech.Recognition.SrgsGrammar;
 using Mono.Options;
 using SimpleServer;
+using System.Collections.Concurrent;
 
 namespace KSIM
 {
@@ -31,6 +32,8 @@ namespace KSIM
             VOXSIM_REG,
             VOXSIM_PASS
         }
+
+        private readonly Dictionary<FrameType, ConcurrentQueue<byte[]>> affixes = new Dictionary<FrameType, ConcurrentQueue<byte[]>>();
 
         /// <summary>
         /// The port at which the application listens for incoming stream requests for Kinect clients
@@ -61,7 +64,7 @@ namespace KSIM
         /// </summary>
         private List<Connection> connectedAudioClients = new List<Connection>();
 
-        
+        private List<Connection> connectedVoxSimClients = new List<Connection>();
 
         /// <summary>
         /// Reference to the MultiSourceFrameReader reader got from the Kinect sensor. Needed to Dispose() at the application exit.
@@ -177,18 +180,23 @@ namespace KSIM
                 textBox.Clear();
                 textBox.AppendText(string.Format("App started at port {0} using {1} microphone and {2} grammar",
                     port, listenFromKinect? "kinect" : "normal", _grammarFile));
-
+                foreach(FrameType ft in (FrameType[]) Enum.GetValues(typeof(FrameType)))
+                {
+                    affixes.Add(ft, new ConcurrentQueue<byte[]>());
+                }
             }
         }
 
         private void OnConnected(object sender, ConnectedEventArgs e)
         {
+            Connection conn = e.GetConnection();
             if (e.OperationSucceeded)
             {
-                Connection conn = e.GetConnection();
                 conn.Received += OnReceived;
                 conn.Sent += OnSent;
             }
+            else
+                RemoveConnection(conn);
         }
 
         private void OnSent(object sender, SentEventArgs e)
@@ -210,6 +218,10 @@ namespace KSIM
             {
                 connectedClients.Remove(conn);
             }
+            lock (connectedVoxSimClients)
+            {
+                connectedVoxSimClients.Remove(conn);
+            }
             conn.Close();
         }
 
@@ -229,15 +241,18 @@ namespace KSIM
                         int length = br.ReadInt32();
                         if (length >= 1)
                         {
-                            MessageType msgType = (MessageType)br.ReadByte();
+                            byte mt = br.ReadByte();
+                            MessageType msgType = (MessageType) mt;
                             switch (msgType)
                             {
                                 case MessageType.RECOGNIZER_REG:
                                     HandleRecognizerRegistration(conn, br);
                                     break;
                                 case MessageType.VOXSIM_REG:
+                                    HandleVoxSimRegistration(conn);
                                     break;
                                 case MessageType.VOXSIM_PASS:
+                                    HandleVoxSimPass(conn, br);
                                     break;
                             }
                         }
@@ -250,22 +265,76 @@ namespace KSIM
             }
         }
 
-        private void HandleRecognizerRegistration(Connection conn, BinaryReader br)
+        private void HandleVoxSimPass(Connection conn, BinaryReader br)
         {
             try
             {
-                int requestedFrames = br.ReadInt32();
+                byte total = br.ReadByte();
+                lock(affixes)
+                {
+                    for (byte i = 0; i < total; i++)
+                    {
+                        // Get the frame types to which the content should be affixed
+                        List<FrameType> activeFrames = GetActiveFrames(br.ReadInt32());
+                        // Get the actual length prefixed content that should be affixed
+                        int contentLength = br.ReadInt32();
+                        byte[] content = br.ReadBytes(contentLength);
 
-                // Parse this integer for requested frames
-                List<FrameType> activeFrames = new List<FrameType>();
-                BitArray reqFramesAsBits = new BitArray(new int[] { requestedFrames });
+                        foreach (FrameType ft in activeFrames)
+                        {
+                            affixes[ft].Enqueue(content);
+                        }
+                    }
+                }
+            }
+            catch (EndOfStreamException)
+            {
+                conn.Close();
+            }
+            catch (IOException)
+            {
+                conn.Close();
+            }
+        }
 
-                // Determine which stream bits are active
+        private void HandleVoxSimRegistration(Connection conn)
+        {
+            lock(connectedVoxSimClients)
+            {
+                connectedVoxSimClients.Add(conn);
+            }
+        }
+
+        private List<FrameType> GetActiveFrames(int requestedFrames)
+        {
+            // Parse this integer for requested frames
+            List<FrameType> activeFrames = new List<FrameType>();
+            BitArray reqFramesAsBits = new BitArray(new int[] { requestedFrames });
+
+            // Determine which stream bits are active
+            try
+            {
                 foreach (FrameType ft in Enum.GetValues(typeof(FrameType)).Cast<FrameType>())
                 {
                     if (reqFramesAsBits.Get((int)ft))
                         activeFrames.Add(ft);
                 }
+            }
+            catch(InvalidCastException)
+            {
+                // TODO: Log this somewhere
+                activeFrames.Clear();
+            }
+
+            return activeFrames;
+        }
+
+        private void HandleRecognizerRegistration(Connection conn, BinaryReader br)
+        {
+            try
+            {
+                int requestedFrames = br.ReadInt32();
+                List<FrameType> activeFrames = GetActiveFrames(requestedFrames);
 
                 if (activeFrames.Count >= 1)
                 {
@@ -379,6 +448,19 @@ namespace KSIM
                         }
                     }
                 }
+
+                lock(affixes)
+                {
+                    foreach (Readers.Frame f in cachedFrames.Values)
+                    {
+                        if (affixes[f.Type].TryDequeue(out byte[] affix))
+                        {
+                            f.Affix = affix;
+                        }
+                    }
+                }
+                
+                
 
                 // We are ensured that all the subscribed frames have already been cached
                 foreach (var client in connectedClients.Keys)

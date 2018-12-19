@@ -89,20 +89,14 @@ namespace KSIM.Readers
         }
             
            
-        public override void Serialize(Stream s)
+        protected override void SerializeMiddle(BinaryWriter writer)
         {
-            using (BinaryWriter writer = new BinaryWriter(s))
+            // Note that each subframe is fixed size -- 1024 bytes
+            writer.Write(audioBuffer.Length);
+
+            for (int i = 0; i < audioBuffer.Length; i++)
             {
-                writer.Write(Timestamp);
-                writer.Write(1 << (int)Type);
-
-                // Note that each subframe is fixed size -- 1024 bytes
-                writer.Write(audioBuffer.Length);
-
-                for(int i = 0; i < audioBuffer.Length; i++)
-                {
-                    writer.Write(audioBuffer[i]);
-                }
+                writer.Write(audioBuffer[i]);
             }
         }
 

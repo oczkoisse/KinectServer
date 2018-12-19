@@ -62,20 +62,14 @@ namespace KSIM.Readers
                 }
             }
 
-            
-            public override void Serialize(Stream s)
-            {
-                using (BinaryWriter writer = new BinaryWriter(s))
-                {
-                    writer.Write(Timestamp);
-                    writer.Write(1 << (int)Type);
 
-                    writer.Write(stride);
-                    writer.Write(Width);
-                    writer.Write(Height);
-                    
-                    writer.Write(colorData);
-                }
+            protected override void SerializeMiddle(BinaryWriter writer)
+            {
+                writer.Write(stride);
+                writer.Write(Width);
+                writer.Write(Height);
+
+                writer.Write(colorData);
             }
 
             protected override void Dispose(bool disposing)

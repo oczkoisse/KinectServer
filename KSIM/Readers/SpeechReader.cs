@@ -101,18 +101,12 @@ namespace KSIM.Readers
    
             return a_plus_b;
         }
-           
-        public override void Serialize(Stream s)
-        {
-            using (BinaryWriter writer = new BinaryWriter(s))
-            {
-                writer.Write(Timestamp);
-                writer.Write(1 << (int)Type);
 
-                byte[] dataToBeWritten = Encoding.ASCII.GetBytes(command);
-                writer.Write(dataToBeWritten.Length);
-                writer.Write(dataToBeWritten);
-            }
+        protected override void SerializeMiddle(BinaryWriter writer)
+        {
+            byte[] dataToBeWritten = Encoding.ASCII.GetBytes(command);
+            writer.Write(dataToBeWritten.Length);
+            writer.Write(dataToBeWritten);
         }
 
         protected override void Dispose(bool disposing)
