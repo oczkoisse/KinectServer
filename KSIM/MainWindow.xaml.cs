@@ -16,6 +16,7 @@ using Microsoft.Speech.Recognition.SrgsGrammar;
 using Mono.Options;
 using SimpleServer;
 using System.Collections.Concurrent;
+using System.Net;
 
 namespace KSIM
 {
@@ -173,7 +174,7 @@ namespace KSIM
             bool success = InitializeKinect();
             if (success)
             {
-                server = new Server(port);
+                server = new Server(IPAddress.Any, port);
                 server.Connected += OnConnected;
                 server.Start();
                 InitializeComponent();
