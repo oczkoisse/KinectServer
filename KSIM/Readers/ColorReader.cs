@@ -64,6 +64,7 @@ namespace KSIM.Readers
 
                     using (KinectBuffer colorBuffer = cf.LockRawImageBuffer())
                     {
+                        // TODO: crop and convert to jpeg. 
                         underlyingColorFrame.CopyConvertedFrameDataToArray(colorData, ColorImageFormat.Bgra);
                     }
                 }
