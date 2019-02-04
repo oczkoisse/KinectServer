@@ -1,0 +1,264 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>KSIM</name>
+    </assembly>
+    <members>
+        <member name="T:KSIM.Readers.Pcm16Stream">
+            <summary>
+            Wrapper Stream Class to Support 32->16bit conversion and support Speech call to Seek
+            </summary>
+        </member>
+        <member name="F:KSIM.Readers.Pcm16Stream.kinect32BitStream">
+            <summary>
+            Holds the kinect audio stream, in 32-bit IEEE float format
+            </summary>
+        </member>
+        <member name="M:KSIM.Readers.Pcm16Stream.#ctor(System.IO.Stream)">
+            <summary>
+            Initializes a new instance of the <see cref="!:KinectAudioStream" /> class.
+            </summary>
+            <param name="input">Kinect audio stream</param>
+        </member>
+        <member name="P:KSIM.Readers.Pcm16Stream.SpeechActive">
+            <summary>
+            Gets or sets a value indicating whether speech recognition is active
+            </summary>
+        </member>
+        <member name="P:KSIM.Readers.Pcm16Stream.CanRead">
+            <summary>
+            CanRead property
+            </summary>
+        </member>
+        <member name="P:KSIM.Readers.Pcm16Stream.CanWrite">
+            <summary>
+            CanWrite property
+            </summary>
+        </member>
+        <member name="P:KSIM.Readers.Pcm16Stream.CanSeek">
+            <summary>
+            CanSeek property
+            </summary>
+        </member>
+        <member name="P:KSIM.Readers.Pcm16Stream.Position">
+            <summary>
+            Position Property
+            </summary>
+        </member>
+        <member name="P:KSIM.Readers.Pcm16Stream.Length">
+            <summary>
+            Gets the length of the stream. Not implemented.
+            </summary>
+        </member>
+        <member name="M:KSIM.Readers.Pcm16Stream.Flush">
+            <summary>
+            Flush the stream. Not implemented.
+            </summary>
+        </member>
+        <member name="M:KSIM.Readers.Pcm16Stream.Seek(System.Int64,System.IO.SeekOrigin)">
+            <summary>
+            Stream Seek. Not implemented and always returns 0.
+            </summary>
+            <param name="offset">A byte offset relative to the origin parameter</param>
+            <param name="origin">A value of type SeekOrigin indicating the reference point used to obtain the new position</param>
+            <returns>Always returns 0</returns>
+        </member>
+        <member name="M:KSIM.Readers.Pcm16Stream.SetLength(System.Int64)">
+            <summary>
+            Set the length of the stream. Not implemented.
+            </summary>
+            <param name="value">Length of the stream</param>
+        </member>
+        <member name="M:KSIM.Readers.Pcm16Stream.Write(System.Byte[],System.Int32,System.Int32)">
+            <summary>
+            Write into the stream. Not implemented.
+            </summary>
+            <param name="buffer">Buffer to write</param>
+            <param name="offset">Offset into the buffer</param>
+            <param name="count">Number of bytes to write</param>
+        </member>
+        <member name="M:KSIM.Readers.Pcm16Stream.Read(System.Byte[],System.Int32,System.Int32)">
+            <summary>
+            Read from the stream and convert from 32 bit IEEE float to 16 bit signed integer
+            </summary>
+            <param name="buffer">Input buffer</param>
+            <param name="offset">Offset into buffer</param>
+            <param name="count">Number of bytes to read</param>
+            <returns>bytes read</returns>
+        </member>
+        <member name="T:KSIM.App">
+            <summary>
+            Interaction logic for App.xaml
+            </summary>
+            <summary>
+            App
+            </summary>
+        </member>
+        <member name="M:KSIM.App.InitializeComponent">
+            <summary>
+            InitializeComponent
+            </summary>
+        </member>
+        <member name="M:KSIM.App.Main">
+            <summary>
+            Application Entry Point.
+            </summary>
+        </member>
+        <member name="T:KSIM.MainWindow">
+            <summary>
+            Class holding the interaction logic for MainWindow.xaml.
+            In addition, this class also handles new incoming client stream requests and
+            interfaces with the underlying Kinect hardware to facilitate these stream requests.
+            </summary>
+            <summary>
+            MainWindow
+            </summary>
+        </member>
+        <member name="F:KSIM.MainWindow.PORT">
+            <summary>
+            The port at which the application listens for incoming stream requests for Kinect clients
+            </summary>
+        </member>
+        <member name="F:KSIM.MainWindow.sensor">
+            <summary>
+            Reference to the Kinect sensor. Needed to Close() at the application exit.
+            </summary>
+        </member>
+        <member name="F:KSIM.MainWindow.server">
+            <summary>
+            The server object to listen for incoming client requests
+            </summary>
+        </member>
+        <member name="F:KSIM.MainWindow.connectedClients">
+            <summary>
+            A dictionary for holding stream types subscribed by each client. The subscribed streams should not contain Audio or Speech
+            </summary>
+        </member>
+        <member name="F:KSIM.MainWindow.connectedAudioClients">
+            <summary>
+            A dictionary for holding clients subscribed to Audio stream. These clients cannot be subscribed to any other stream.
+            </summary>
+        </member>
+        <member name="F:KSIM.MainWindow.multiSourceFrameReader">
+            <summary>
+            Reference to the MultiSourceFrameReader reader got from the Kinect sensor. Needed to Dispose() at the application exit.
+            </summary>
+        </member>
+        <member name="F:KSIM.MainWindow.audioFrameReader">
+            <summary>
+            Reference to the AudioBeamFrameReader reader got from the Kinect sensor. Needed to Dispose() at the application exit.
+            </summary>
+        </member>
+        <member name="F:KSIM.MainWindow.audioStream">
+            <summary>
+            Conversion stream needed to convert the raw 32 bit floating point samples emitted by Kinect into PCM 16 bit data
+            that can be recognized by the SpeechRecognitionEngine.
+            Needed to speechActive = false at application exit
+            </summary>
+        </member>
+        <member name="F:KSIM.MainWindow.speechEngine">
+            <summary>
+            Reference to the SpeechRecognitionEngine. Needed to stop async recogntion at the application exit.
+            </summary>
+        </member>
+        <member name="P:KSIM.MainWindow.LastTimestamp">
+            <summary>
+            Provides an atomic read/write for the last timestamp set in <see cref="M:KSIM.MainWindow.Reader_MultiSourceFrameArrived(System.Object,Microsoft.Kinect.MultiSourceFrameArrivedEventArgs)"/>
+            </summary>
+            <value>
+            The timestamp set in <see cref="M:KSIM.MainWindow.Reader_MultiSourceFrameArrived(System.Object,Microsoft.Kinect.MultiSourceFrameArrivedEventArgs)"/> the last time that event was fired
+            </value>
+            <remarks>
+            This still cannot ensure perfect sync between <see cref="M:KSIM.MainWindow.Reader_AudioFrameArrived(System.Object,Microsoft.Kinect.AudioBeamFrameArrivedEventArgs)"/> 
+            and <see cref="M:KSIM.MainWindow.Reader_SpeechRecognized(System.Object,Microsoft.Speech.Recognition.SpeechRecognizedEventArgs)"/>, since those operate in their own event threads.
+            </remarks>
+        </member>
+        <member name="M:KSIM.MainWindow.HandleNewClient(System.IAsyncResult)">
+            <summary>
+            Handles incoming client connections. The current implementation verifies these requests by
+            reading first 4 bytes sent by the client, which are are validated by <see cref="M:KSIM.MainWindow.GetActiveFrames(System.Byte[])"/> into a list of stream types.
+            The client is accepted as a valid subscriber if and only if one of the following is true:
+            <list type="bullet">
+            <item> The client request only constitutes the Audio stream type</item>
+            <item> The client request only constitutes the Speech stream type</item>
+            <item> The client request contains one or more stream types other than Audio and Speech</item>
+            </list> 
+            </summary>
+            <param name="res"></param>
+        </member>
+        <member name="M:KSIM.MainWindow.GetActiveFrames(System.Byte[])">
+            <summary>
+            Decodes the input bytes into a list of frame types. Currently, bits 1-31 are the only ones considered, which correspond to frame types as follows:
+            <list type="table">
+            <listheader>
+            <term>Bit position</term>
+            <description>Frame type</description>
+            </listheader>
+            <item>
+            <term>1</term>
+            <description>Color</description>
+            <term>2</term>
+            <description>Speech</description>
+            <term>3</term>
+            <description>Audio</description>
+            <term>4</term>
+            <description>Depth</description>
+            <term>5</term>
+            <description>Closest Body</description>
+            <term>6</term>
+            <description>Left Hand Depth</description>
+            <term>7</term>
+            <description>Right Hand Depth</description>
+            <term>8</term>
+            <description>Head Depth</description>
+            </item>
+            </list>
+            </summary>
+            <param name="frameBytes"></param>
+            <returns>A list of frame types as decoded from the input bytes</returns>
+        </member>
+        <member name="M:KSIM.MainWindow.ContinueAcceptConnections">
+            <summary>
+            Starts an asynchronous client accept operation
+            </summary>
+        </member>
+        <member name="M:KSIM.MainWindow.#ctor">
+            <summary>
+            The constructor for MainWindow class. Sets the default value for <see cref="P:KSIM.MainWindow.LastTimestamp"/> as minimum possible for 64-bit signed integer.
+            Initializes the Kinect sensor, along with different native frame readers. 
+            If successfull, also starts a server for accepting client requests for different streams.
+            Finally, setups the window controls
+            </summary>
+        </member>
+        <member name="M:KSIM.MainWindow.TryGetKinectRecognizer">
+            <summary>
+            Gets the metadata for the speech recognizer (acoustic model) most suitable to
+            process audio from Kinect device.
+            </summary>
+            <returns>
+            RecognizerInfo if found, <code>null</code> otherwise.
+            </returns>
+        </member>
+        <member name="M:KSIM.MainWindow.InitializeComponent">
+            <summary>
+            InitializeComponent
+            </summary>
+        </member>
+        <member name="T:KSIM.Properties.Resources">
+            <summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary>
+        </member>
+        <member name="P:KSIM.Properties.Resources.ResourceManager">
+            <summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary>
+        </member>
+        <member name="P:KSIM.Properties.Resources.Culture">
+            <summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary>
+        </member>
+    </members>
+</doc>
