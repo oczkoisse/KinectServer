@@ -12,6 +12,7 @@ using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Diagnostics;
 
 namespace KSIM.Readers
 {
@@ -77,7 +78,7 @@ namespace KSIM.Readers
                             bmp = new Bitmap(Width, Height, stride, System.Drawing.Imaging.PixelFormat.Format32bppArgb, iPtr);
                         }
                         bmp.Save(compressedColorData, ImageFormat.Jpeg);
-                        
+                      
                     }
                 }
             }
