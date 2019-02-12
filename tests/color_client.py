@@ -40,11 +40,11 @@ def decode_frame(raw_frame):
 
     # In each frame, a header is transmitted
     # Timestamp | frame type | width | height
-    header_format = "qiiii"
+    header_format = "qiiiii"
     header_size = struct.calcsize(endianness + header_format)
     header = struct.unpack(endianness + header_format, raw_frame[:header_size])
 
-    timestamp, frame_type, stride, width, height = header
+    timestamp, frame_type, stride, width, height, num_bits = header
     
     color_data_format = str(stride * height) + "B"
 
