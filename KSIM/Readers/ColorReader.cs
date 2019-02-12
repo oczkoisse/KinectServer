@@ -72,13 +72,14 @@ namespace KSIM.Readers
                     {
                         // TODO: crop and convert to jpeg. 
                         underlyingColorFrame.CopyConvertedFrameDataToArray(colorData, ColorImageFormat.Bgra);
+			// creates a pointer to the data which allows data to be saved as a bitmap type
                         fixed (byte* bPtr = colorData)
                         {
                             IntPtr iPtr = (IntPtr)bPtr;
                             bmp = new Bitmap(Width, Height, stride, System.Drawing.Imaging.PixelFormat.Format32bppArgb, iPtr);
                         }
+			// Here the data is compressed to jpeg.  
                         bmp.Save(compressedColorData, ImageFormat.Jpeg);
-                      
                     }
                 }
             }
