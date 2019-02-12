@@ -45,6 +45,7 @@ namespace KSIM.Readers
             private byte[] colorData = null;
             private int stride = 0;
             private  MemoryStream compressedColorData = new MemoryStream();
+            private int num_bytes = 0;
 
             unsafe public ColorFrame(Microsoft.Kinect.ColorFrame cf)
             {
@@ -78,6 +79,7 @@ namespace KSIM.Readers
                             bmp = new Bitmap(Width, Height, stride, System.Drawing.Imaging.PixelFormat.Format32bppArgb, iPtr);
                         }
                         bmp.Save(compressedColorData, ImageFormat.Jpeg);
+                        num_bytes = compressedColorData.ToArray().Length;
                       
                     }
                 }
@@ -96,6 +98,7 @@ namespace KSIM.Readers
                     writer.Write(stride);
                     writer.Write(Width);
                     writer.Write(Height);
+                    writer.Write(num_bytes);
                     
                     writer.Write(compressedColorData.ToArray());
                     
