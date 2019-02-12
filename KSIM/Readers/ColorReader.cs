@@ -45,6 +45,7 @@ namespace KSIM.Readers
             private byte[] colorData = null;
             private int stride = 0;
             private  MemoryStream compressedColorData = new MemoryStream();
+            private int num_bytes = 0;
 
             unsafe public ColorFrame(Microsoft.Kinect.ColorFrame cf)
             {
@@ -72,14 +73,14 @@ namespace KSIM.Readers
                     {
                         // TODO: crop and convert to jpeg. 
                         underlyingColorFrame.CopyConvertedFrameDataToArray(colorData, ColorImageFormat.Bgra);
-			// creates a pointer to the data which allows data to be saved as a bitmap type
                         fixed (byte* bPtr = colorData)
                         {
                             IntPtr iPtr = (IntPtr)bPtr;
                             bmp = new Bitmap(Width, Height, stride, System.Drawing.Imaging.PixelFormat.Format32bppArgb, iPtr);
                         }
-			// Here the data is compressed to jpeg.  
                         bmp.Save(compressedColorData, ImageFormat.Jpeg);
+                        num_bytes = compressedColorData.ToArray().Length;
+                      
                     }
                 }
             }
@@ -97,6 +98,7 @@ namespace KSIM.Readers
                     writer.Write(stride);
                     writer.Write(Width);
                     writer.Write(Height);
+                    writer.Write(num_bytes);
                     
                     writer.Write(compressedColorData.ToArray());
                     

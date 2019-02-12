@@ -4,9 +4,8 @@ import socket, sys, struct
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-import imageio
 
-src_addr = 'cwc2'
+src_addr = 'localhost'
 src_port = 8000
 
 stream_id = 2;
@@ -21,20 +20,21 @@ def connect():
     try:
         sock.connect((src_addr, src_port))
     except:
-        print ("Error connecting to {}:{}".format(src_addr, src_port))
+        print "Error connecting to {}:{}".format(src_addr, src_port)
         return None
     try:
-        print ("Sending stream info")
-        sock.sendall(struct.pack('<i', stream_id));
+		print "Sending stream info"
+		sock.sendall(struct.pack('<i', stream_id));
     except:
-        print ("Error: Stream rejected")
+        print "Error: Stream rejected"
         return None
-    print ("Successfully connected to host")
+    print "Successfully connected to host"
     return sock
     
 
 # timestamp | frame type | stride | width | height | color_data
 def decode_frame(raw_frame):
+    
     # Expect little endian byte order
     endianness = "<"
 
@@ -47,10 +47,8 @@ def decode_frame(raw_frame):
     timestamp, frame_type, stride, width, height, num_bits = header
     
     color_data_format = str(stride * height) + "B"
-
-    # Removed called to struct.unpack_from and decoded the jpeg file
-    # Relies on the imageio library 
-    color_data = imageio.imread(raw_frame[header_size:], "jpeg")
+    
+    color_data = struct.unpack_from(endianness + color_data_format, raw_frame, header_size)
     
     return (timestamp, frame_type, stride, width, height, list(color_data))
 
@@ -59,7 +57,7 @@ def format_as_image(raw_image, width, height):
     image_as_pixels = np.array([ (raw_image[i+2], raw_image[i+1], raw_image[i], raw_image[i+3]) for i in range(0, len(raw_image), 4)] , dtype=np.float)
     image_as_pixels /= 255.0
     
-    return image_as_pixels.reshape((height, width, 3))
+    return image_as_pixels.reshape((height, width, 4))
 
 def recv_all(sock, size):
     result = b''
@@ -97,25 +95,25 @@ if __name__ == '__main__':
         except:
             s.close()
             break
-        print ("Time taken for this frame: {}".format(t_end - t_begin))
+        print "Time taken for this frame: {}".format(t_end - t_begin)
         avg_frame_time += (t_end - t_begin)
         timestamp, frame_type, stride, width, height, color_data = decode_frame(f)
-        print (timestamp, frame_type, stride, width, height)
+        print timestamp, frame_type, stride, width, height
 
         if do_plot and i % 20 == 0:
             img = format_as_image(color_data, width, height)
-            print (img[0,0])
+            print img[0,0]
             plt.imshow(img)
             plt.show()
             
-        print ("\n\n")
+        print "\n\n"
         i += 1
 
-    print ("Total frame time: {}".format(avg_frame_time))
+    print "Total frame time: {}".format(avg_frame_time)
 
     avg_frame_time /= i
     
-    print ("Average frame time over {} frames: {}".format(i, avg_frame_time))
+    print "Average frame time over {} frames: {}".format(i, avg_frame_time)
 
     s.close()
     sys.exit(0)
