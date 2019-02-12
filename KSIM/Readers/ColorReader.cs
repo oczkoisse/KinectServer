@@ -8,7 +8,11 @@ using Microsoft.Kinect;
 using System.Windows.Media.Imaging;
 using System.Windows.Media;
 using System.Windows;
+using System.Windows.Forms;
 using System.Runtime.InteropServices;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Diagnostics;
 
 namespace KSIM.Readers
 {
@@ -37,10 +41,12 @@ namespace KSIM.Readers
                 get { return underlyingColorFrame; }
             }
 
+            private Bitmap bmp = null;
             private byte[] colorData = null;
             private int stride = 0;
-            
-            public ColorFrame(Microsoft.Kinect.ColorFrame cf)
+            private  MemoryStream compressedColorData = new MemoryStream();
+
+            unsafe public ColorFrame(Microsoft.Kinect.ColorFrame cf)
             {
                 Type = FrameType.Color;
 
@@ -66,6 +72,13 @@ namespace KSIM.Readers
                     {
                         // TODO: crop and convert to jpeg. 
                         underlyingColorFrame.CopyConvertedFrameDataToArray(colorData, ColorImageFormat.Bgra);
+                        fixed (byte* bPtr = colorData)
+                        {
+                            IntPtr iPtr = (IntPtr)bPtr;
+                            bmp = new Bitmap(Width, Height, stride, System.Drawing.Imaging.PixelFormat.Format32bppArgb, iPtr);
+                        }
+                        bmp.Save(compressedColorData, ImageFormat.Jpeg);
+                      
                     }
                 }
             }
@@ -84,7 +97,7 @@ namespace KSIM.Readers
                     writer.Write(Width);
                     writer.Write(Height);
                     
-                    writer.Write(colorData);
+                    writer.Write(compressedColorData.ToArray());
                     
                     // Rewind back to write the load size in the first 4 bytes
                     loadSize = (int)writer.Seek(0, SeekOrigin.Current) - sizeof(int);
