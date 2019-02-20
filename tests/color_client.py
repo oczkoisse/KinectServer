@@ -5,11 +5,12 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 import imageio
+import cv2
 
 src_addr = 'cwc2'
 src_port = 8000
 
-stream_id = 2;
+stream_id = 512;
 
 def connect():
     """
@@ -49,14 +50,16 @@ def decode_frame(raw_frame):
     color_data_format = str(stride * height) + "B"
 
     # Removed called to struct.unpack_from and decoded the jpeg file
-    # Relies on the imageio library 
+    # Relies on the imageio jibrary 
+    print(header)
     color_data = imageio.imread(raw_frame[header_size:], "jpeg")
     
-    return (timestamp, frame_type, stride, width, height, list(color_data))
+    return (timestamp, frame_type, stride, width, height, color_data)
 
 def format_as_image(raw_image, width, height):
     # Convert to RGBA from BGRA
     image_as_pixels = np.array([ (raw_image[i+2], raw_image[i+1], raw_image[i], raw_image[i+3]) for i in range(0, len(raw_image), 4)] , dtype=np.float)
+    #image_as_pixels = np.array(raw_image)
     image_as_pixels /= 255.0
     
     return image_as_pixels.reshape((height, width, 3))
@@ -99,14 +102,21 @@ if __name__ == '__main__':
             break
         print ("Time taken for this frame: {}".format(t_end - t_begin))
         avg_frame_time += (t_end - t_begin)
-        timestamp, frame_type, stride, width, height, color_data = decode_frame(f)
+        timestamp, frame_type, stride, width, height, img = decode_frame(f)
+        #temp = img[:,0]
+        #img[:,0] = img[:,2]
+        #img[:,2] = temp
         print (timestamp, frame_type, stride, width, height)
 
-        if do_plot and i % 20 == 0:
-            img = format_as_image(color_data, width, height)
-            print (img[0,0])
-            plt.imshow(img)
-            plt.show()
+        if do_plot and i %1  == 0:
+            #img = format_as_image(color_data, width, height)
+            #print (img[0,0])
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            cv2.imshow("David is bad at Overwatch", img)
+            cv2.waitKey(1)
+           # plt.show(block = False)
+           # plt.pause(0.1)
+           # plt.close()
             
         print ("\n\n")
         i += 1
