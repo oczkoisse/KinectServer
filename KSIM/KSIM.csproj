@@ -76,6 +76,8 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Readers\HeadColorReader.cs" />
+    <Compile Include="Readers\SegmentedColorFrame.cs" />
     <Compile Include="Readers\SpeechReader.cs" />
     <Compile Include="Readers\AudioReader.cs" />
     <Compile Include="Readers\ClosestBodyReader.cs" />
