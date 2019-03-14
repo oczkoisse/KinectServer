@@ -30,7 +30,7 @@ namespace KSIM.Readers
                 return new ColorFrame(originalFrame); 
         }
 
-        public sealed class ColorFrame : Frame
+        public class ColorFrame : Frame
         {
             private bool disposed = false;
 
