@@ -5,7 +5,7 @@ import sys
 import struct
 from decode import read_frame
 
-src_addr = 'cwc1.cs.colostate.edu'
+src_addr = 'localhost'
 src_port = 8000
 
 stream_id = 4
