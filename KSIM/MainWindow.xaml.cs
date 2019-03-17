@@ -45,10 +45,7 @@ namespace KSIM
 
         private string _grammarFile = "defaultGrammar.grxml";
 
-        /// <summary>
-        /// Reference to the Kinect sensor. Needed to Close() at the application exit.
-        /// </summary>
-        private static KinectSensor sensor;
+        private SimpleKinectSensor sensor;
 
         /// <summary>
         /// The server object to listen for incoming client requests
@@ -66,17 +63,7 @@ namespace KSIM
         private List<Connection> connectedAudioClients = new List<Connection>();
 
         private List<Connection> connectedVoxSimClients = new List<Connection>();
-
-        /// <summary>
-        /// Reference to the MultiSourceFrameReader reader got from the Kinect sensor. Needed to Dispose() at the application exit.
-        /// </summary>
-        private MultiSourceFrameReader multiSourceFrameReader = null;
-
-        /// <summary>
-        /// Reference to the AudioBeamFrameReader reader got from the Kinect sensor. Needed to Dispose() at the application exit.
-        /// </summary>
-        private AudioBeamFrameReader audioFrameReader = null;
-
+        
         /// <summary>
         /// Conversion stream needed to convert the raw 32 bit floating point samples emitted by Kinect into PCM 16 bit data
         /// that can be recognized by the SpeechRecognitionEngine.
@@ -88,27 +75,7 @@ namespace KSIM
         /// Reference to the SpeechRecognitionEngine. Needed to stop async recogntion at the application exit.
         /// </summary>
         private static SpeechRecognitionEngine speechEngine;
-
-        // To keep sync between MultiSouceFrame, AudioBeamFrame and Speech stream
-        // Note that we cannot ensure perfect sync between AudioBeamFrame and Speech stream
-        private long lastTimestamp;
-
-        /// <summary>
-        /// Provides an atomic read/write for the last timestamp set in <see cref="Reader_MultiSourceFrameArrived(object, MultiSourceFrameArrivedEventArgs)"/>
-        /// </summary>
-        /// <value>
-        /// The timestamp set in <see cref="Reader_MultiSourceFrameArrived(object, MultiSourceFrameArrivedEventArgs)"/> the last time that event was fired
-        /// </value>
-        /// <remarks>
-        /// This still cannot ensure perfect sync between <see cref="Reader_AudioFrameArrived(object, AudioBeamFrameArrivedEventArgs)"/> 
-        /// and <see cref="Reader_SpeechRecognized(object, SpeechRecognizedEventArgs)"/>, since those operate in their own event threads.
-        /// </remarks>
-        private long LastTimestamp
-        {
-            get { return Interlocked.Read(ref lastTimestamp); }
-            set { Interlocked.Exchange(ref lastTimestamp, value); }
-        }
-
+        
         
         /// <summary>
         /// The constructor for MainWindow class. Sets the default value for <see cref="LastTimestamp"/> as minimum possible for 64-bit signed integer.
@@ -168,23 +135,18 @@ namespace KSIM
                 return;
             }
 
+            InitializeKinect();
 
-
-            LastTimestamp = Int64.MinValue;
-            bool success = InitializeKinect();
-            if (success)
+            server = new Server(IPAddress.Any, port);
+            server.Connected += OnConnected;
+            server.Start();
+            InitializeComponent();
+            textBox.Clear();
+            textBox.AppendText(string.Format("App started at port {0} using {1} microphone and {2} grammar",
+                port, listenFromKinect ? "kinect" : "normal", _grammarFile));
+            foreach (FrameType ft in (FrameType[])Enum.GetValues(typeof(FrameType)))
             {
-                server = new Server(IPAddress.Any, port);
-                server.Connected += OnConnected;
-                server.Start();
-                InitializeComponent();
-                textBox.Clear();
-                textBox.AppendText(string.Format("App started at port {0} using {1} microphone and {2} grammar",
-                    port, listenFromKinect? "kinect" : "normal", _grammarFile));
-                foreach(FrameType ft in (FrameType[]) Enum.GetValues(typeof(FrameType)))
-                {
-                    affixes.Add(ft, new ConcurrentQueue<byte[]>());
-                }
+                affixes.Add(ft, new ConcurrentQueue<byte[]>());
             }
         }
 
@@ -414,105 +376,6 @@ namespace KSIM
             }
         }
 
-        private void Reader_MultiSourceFrameArrived(object sender, MultiSourceFrameArrivedEventArgs e)
-        {
-            MultiSourceFrame msf = e.FrameReference.AcquireFrame();
-
-            long prevTimestamp = LastTimestamp;
-            long curTimestamp = DateTime.Now.Ticks;
-
-            
-            Dictionary<Readers.FrameType, Readers.Frame> cachedFrames = new Dictionary<Readers.FrameType, Readers.Frame>();
-
-            // Will lock new connections until all previous clients are sent data
-            lock (connectedClients)
-            {
-                // Cache all frames
-                foreach (var client in connectedClients.Keys)
-                {
-                    foreach (var frameType in connectedClients[client])
-                    {
-                        if (!cachedFrames.ContainsKey(frameType))
-                        {
-                            KSIM.Readers.Frame frame = frameType.GetReader().Read(msf);
-                            if (frame != null)
-                            {
-                                frame.Timestamp = curTimestamp;
-                                cachedFrames[frameType] = frame;
-                            }
-                            else
-                            {
-                                // To ensure synchronization, do not send any frame if one of the subscribed ones is unavailable (null)
-                                // But we still need to dispose of the frames already cached
-                                goto DisposeFrames;
-                            }
-                        }
-                    }
-                }
-
-                lock(affixes)
-                {
-                    foreach (Readers.Frame f in cachedFrames.Values)
-                    {
-                        if (affixes[f.Type].TryDequeue(out byte[] affix))
-                        {
-                            f.Affix = affix;
-                        }
-                    }
-                }
-                
-                
-
-                // We are ensured that all the subscribed frames have already been cached
-                foreach (var client in connectedClients.Keys)
-                {
-                    // Send all subscribed frames to client together to avoid synchronization issues between subscribed streams
-                    foreach(var frameType in connectedClients[client])
-                    {
-                        using (var ms = new MemoryStream())
-                        {
-                            cachedFrames[frameType].Serialize(ms);
-                            byte[] dataToSend = ms.ToArray();
-                            client.Write(new Packet(dataToSend));
-                        }
-                    }
-                }                
-            }
-            
-            DisposeFrames:
-            // Dispose frames quickly otherwise Kinect will hang
-            foreach (var frame in cachedFrames.Values)
-                frame.Dispose();
-        }
-
-        private void Reader_AudioFrameArrived(object sender, AudioBeamFrameArrivedEventArgs e)
-        {
-            var audioBeamList = e.FrameReference.AcquireBeamFrames();
-
-            var f = (AudioFrame)KSIM.Readers.FrameType.Audio.GetReader().Read(audioBeamList);
-            if (f == null)
-                return;
-
-            f.Timestamp = LastTimestamp;
-            
-
-            using (var ms = new MemoryStream())
-            {
-                f.Serialize(ms);
-                // Dispose quickly else Kinect will hang
-                f.Dispose();
-                // Cache
-                byte[] dataToSend = ms.ToArray();
-                lock(connectedAudioClients)
-                {
-                    foreach(var client in connectedAudioClients)
-                    {
-                        client.Write(new Packet(dataToSend));
-                    }
-                }
-            }
-        }
-
         private void Reader_SpeechRecognized(object sender, SpeechRecognizedEventArgs e)
         {
             var result = e.Result;
@@ -558,55 +421,129 @@ namespace KSIM
             return null;
         }
 
-        private bool InitializeKinect()
+        private void InitializeKinect()
         {
-            sensor = KinectSensor.GetDefault();
-            if (sensor != null)
+            sensor = new SimpleKinectSensor(SimpleKinectSensor.FrameType.Audio | SimpleKinectSensor.FrameType.Body
+                | SimpleKinectSensor.FrameType.Color | SimpleKinectSensor.FrameType.Depth | SimpleKinectSensor.FrameType.Face);
+            sensor.MultiSourceFrameArrived += OnMultiSourceFrameArrived;
+
+            if (sensor.AudioBeam != null)
             {
-                this.multiSourceFrameReader = sensor.OpenMultiSourceFrameReader(FrameSourceTypes.Depth | FrameSourceTypes.Color | FrameSourceTypes.Body);
-
-                bool audioInitialized = InitializeKinectAudio();
-                if (!audioInitialized && listenFromKinect)
-                {
-                    throw new Exception("Unable to initialize Kinect Audio, so can't listen from it");
-                }
-
-                if (!InitializeSpeechEngine(_grammarFile))
-                {
-                    throw new Exception("Unable to initialize Speech Engine");
-                }
-
-                
-                sensor.Open();
-                multiSourceFrameReader.MultiSourceFrameArrived += Reader_MultiSourceFrameArrived;
-                return true;
-            }
-            return false;
-        }
-
-        private bool InitializeKinectAudio()
-        {
-            this.audioFrameReader = sensor.AudioSource.OpenReader();
-            var beams = sensor.AudioSource.AudioBeams;
-            if (beams != null && beams.Count > 0)
-            {
+                sensor.AudioBeam.AudioBeamMode = AudioBeamMode.Manual;
                 // Beam angle is in Radians theroretically between -1.58 to 1.58 (+- 90 degrees)
                 // Practically, Kinect is limited to -0.87 to 0.87 (+- 90 degrees) with 5 degree increments
                 // Note that setting beam mode and beam angle will only work if the
                 // application window is in the foreground.
                 // Furthermore, setting these values is an asynchronous operation --
                 // it may take a short period of time for the beam to adjust.
-                beams[0].AudioBeamMode = AudioBeamMode.Manual;
-                beams[0].BeamAngle = 0.0f;
+                sensor.AudioBeam.BeamAngle = 0.0f;
 
-                this.audioStream = new Pcm16Stream(beams[0].OpenInputStream());
+                audioStream = new Pcm16Stream(sensor.AudioBeam.OpenInputStream());
                 // let the underlying stream know speech is going active
-                this.audioStream.SpeechActive = true;
+                audioStream.SpeechActive = true;
 
-                audioFrameReader.FrameArrived += Reader_AudioFrameArrived;
-                return true;
+                sensor.AudioBeamFrameArrived += OnAudioBeamFrameArrived;
             }
-            return false;
+            else if (listenFromKinect)
+                throw new Exception("Unable to initialize Kinect Audio, so can't listen from it");
+            
+            if (!InitializeSpeechEngine(_grammarFile))
+                throw new Exception("Unable to initialize Speech Engine");
+        }
+
+        private void OnAudioBeamFrameArrived(object sender, SKAudioBeamFrameArrivedEventArgs e)
+        {
+            var audioBeamList = e.Args.FrameReference.AcquireBeamFrames();
+
+            var f = (AudioFrame)KSIM.Readers.FrameType.Audio.GetReader().Read(audioBeamList);
+            if (f == null)
+                return;
+
+            f.Timestamp = e.Timestamp;
+
+
+            using (var ms = new MemoryStream())
+            {
+                f.Serialize(ms);
+                // Dispose quickly else Kinect will hang
+                f.Dispose();
+                // Cache
+                byte[] dataToSend = ms.ToArray();
+                lock (connectedAudioClients)
+                {
+                    foreach (var client in connectedAudioClients)
+                    {
+                        client.Write(new Packet(dataToSend));
+                    }
+                }
+            }
+        }
+
+        private void OnMultiSourceFrameArrived(object sender, SKMultiSourceFrameArrivedEventArgs e)
+        {
+            MultiSourceFrame msf = e.Args.FrameReference.AcquireFrame();
+                       
+            Dictionary<Readers.FrameType, Readers.Frame> cachedFrames = new Dictionary<Readers.FrameType, Readers.Frame>();
+
+            // Will lock new connections until all previous clients are sent data
+            lock (connectedClients)
+            {
+                // Cache all frames
+                foreach (var client in connectedClients.Keys)
+                {
+                    foreach (var frameType in connectedClients[client])
+                    {
+                        if (!cachedFrames.ContainsKey(frameType))
+                        {
+                            KSIM.Readers.Frame frame = frameType.GetReader().Read(msf);
+                            if (frame != null)
+                            {
+                                frame.Timestamp = e.Timestamp;
+                                cachedFrames[frameType] = frame;
+                            }
+                            else
+                            {
+                                // To ensure synchronization, do not send any frame if one of the subscribed ones is unavailable (null)
+                                // But we still need to dispose of the frames already cached
+                                goto DisposeFrames;
+                            }
+                        }
+                    }
+                }
+
+                lock (affixes)
+                {
+                    foreach (Readers.Frame f in cachedFrames.Values)
+                    {
+                        if (affixes[f.Type].TryDequeue(out byte[] affix))
+                        {
+                            f.Affix = affix;
+                        }
+                    }
+                }
+
+
+
+                // We are ensured that all the subscribed frames have already been cached
+                foreach (var client in connectedClients.Keys)
+                {
+                    // Send all subscribed frames to client together to avoid synchronization issues between subscribed streams
+                    foreach (var frameType in connectedClients[client])
+                    {
+                        using (var ms = new MemoryStream())
+                        {
+                            cachedFrames[frameType].Serialize(ms);
+                            byte[] dataToSend = ms.ToArray();
+                            client.Write(new Packet(dataToSend));
+                        }
+                    }
+                }
+            }
+
+        DisposeFrames:
+            // Dispose frames quickly otherwise Kinect will hang
+            foreach (var frame in cachedFrames.Values)
+                frame.Dispose();
         }
 
         static Grammar LoadGrammar(string grammarPathString, bool forceCompile)
@@ -688,19 +625,7 @@ namespace KSIM
             }
             // Stop listening too
             server.Stop();
-
-            // Release Kinect resources
-            if (multiSourceFrameReader != null)
-            {
-                multiSourceFrameReader.MultiSourceFrameArrived -= Reader_MultiSourceFrameArrived;
-                multiSourceFrameReader.Dispose();
-            }
-            if (audioFrameReader != null)
-            {
-                audioFrameReader.FrameArrived -= Reader_AudioFrameArrived;
-                audioFrameReader.Dispose();
-            }
-
+            
             if (audioStream != null)
             {
                 audioStream.SpeechActive = false;

@@ -1,0 +1,2 @@
+NuiDatabase/**/*.bin filter=lfs diff=lfs merge=lfs -text
+NuiDatabase/**/*.model filter=lfs diff=lfs merge=lfs -text
