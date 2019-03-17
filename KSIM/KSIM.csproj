@@ -93,6 +93,7 @@
     <Compile Include="Readers\RHDepthReader.cs" />
     <Compile Include="Readers\SegmentedDepthFrame.cs" />
     <Compile Include="SimpleKinectException.cs" />
+    <Compile Include="SKEventArgs.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
