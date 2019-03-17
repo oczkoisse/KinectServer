@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using KSIM.Readers;
 using Microsoft.Kinect;
 using Microsoft.Kinect.Face;
 
@@ -152,7 +151,10 @@ namespace KSIM
         {
             if (sensor == null)
                 throw new ArgumentNullException("Sensor is null");
-            
+
+            faceFrameSources = new FaceFrameSource[MaxTrackedBodies];
+            faceFrameReaders = new FaceFrameReader[MaxTrackedBodies];
+
             for (int i=0; i<MaxTrackedBodies; i++)
             {
                 faceFrameSources[i] = new FaceFrameSource(sensor, 0, faceFrameFeatures);
