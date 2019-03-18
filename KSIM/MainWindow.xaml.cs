@@ -78,7 +78,7 @@ namespace KSIM
         
         
         /// <summary>
-        /// The constructor for MainWindow class. Sets the default value for <see cref="LastTimestamp"/> as minimum possible for 64-bit signed integer.
+        /// The constructor for MainWindow class.
         /// Initializes the Kinect sensor, along with different native frame readers. 
         /// If successfull, also starts a server for accepting client requests for different streams.
         /// Finally, setups the window controls
