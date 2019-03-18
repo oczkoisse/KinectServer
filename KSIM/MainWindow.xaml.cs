@@ -270,23 +270,16 @@ namespace KSIM
 
         private List<FrameType> GetActiveFrames(int requestedFrames)
         {
+            FrameType frameTypeFlags = (FrameType) requestedFrames;
+            
             // Parse this integer for requested frames
             List<FrameType> activeFrames = new List<FrameType>();
-            BitArray reqFramesAsBits = new BitArray(new int[] { requestedFrames });
 
             // Determine which stream bits are active
-            try
+            foreach (FrameType ft in Enum.GetValues(typeof(FrameType)).Cast<FrameType>())
             {
-                foreach (FrameType ft in Enum.GetValues(typeof(FrameType)).Cast<FrameType>())
-                {
-                    if (reqFramesAsBits.Get((int)ft))
-                        activeFrames.Add(ft);
-                }
-            }
-            catch(InvalidCastException)
-            {
-                // TODO: Log this somewhere
-                activeFrames.Clear();
+                if (frameTypeFlags.HasFlag(ft))
+                    activeFrames.Add(ft);
             }
 
             return activeFrames;

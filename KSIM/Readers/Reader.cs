@@ -22,10 +22,19 @@ namespace KSIM.Readers
         }
     }
 
-    // All frame types start internally from 1
-    // i.e. if a client sends all zeros that is invalid frame type
-    // The corresponding bit pattern that client should send for requesting a stream is computed as 2**frame_type
-    public enum FrameType { Color=1, Speech, Audio, Depth, ClosestBody, LHDepth, RHDepth, HeadDepth, HeadColor };
+    [Flags]
+    public enum FrameType
+    {
+        Color =2,
+        Speech = 4,
+        Audio = 8,
+        Depth = 16,
+        ClosestBody = 32,
+        LHDepth = 64,
+        RHDepth = 128,
+        HeadDepth = 256,
+        HeadColor = 512
+    };
 
     public static class FrameTypeExtensions
     {
@@ -118,7 +127,7 @@ namespace KSIM.Readers
         protected virtual void SerializeHeader(BinaryWriter writer)
         {
             writer.Write(Timestamp);
-            writer.Write(1 << (int)Type);
+            writer.Write((int)Type);
         }
 
 
