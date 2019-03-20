@@ -1,30 +1,16 @@
-﻿
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Kinect;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Windows.Media;
 
-
-namespace KSIM.Readers
+namespace KSIM.Frames
 {
-    public abstract class SegmentedColorFrame : KSIM.Readers.ColorFrame
+    public abstract class SegmentedDepthFrame : DepthFrame
     {
-        private bool disposed = false;
-        private Rectangle crop; // Determines area to crop
-        private Bitmap croppedColorDataBitMap = null; // Creates a bitmap of the cropped image
-
         private ClosestBodyFrame underlyingClosestBodyFrame = null;
 
         protected ClosestBodyFrame UnderlyingClosestBodyFrame
         {
-            get { return underlyingClosestBodyFrame; }
+            get { return underlyingClosestBodyFrame;  }
         }
 
         public int SegmentedWidth
@@ -37,18 +23,13 @@ namespace KSIM.Readers
             get { return yEnd - yStart; }
         }
 
-        public int SegmentedStride
-        {
-            get { return (SegmentedWidth * PixelFormats.Bgra32.BitsPerPixel + 7) / 8; }
-        }
-
         private bool segmented = false;
         public bool Segmented
         {
             get { return segmented; }
         }
 
-        public SegmentedColorFrame(Microsoft.Kinect.ColorFrame cf, ClosestBodyFrame cbf) : base(cf)
+        public SegmentedDepthFrame(Microsoft.Kinect.DepthFrame df, ClosestBodyFrame cbf) : base(df)
         {
             underlyingClosestBodyFrame = cbf;
 
@@ -56,25 +37,27 @@ namespace KSIM.Readers
 
             // If unable to segment, then the reader should return a null frame
             segmented = Segment();
-            // No need to threshold because there is no depth data
+
+            if (segmented)
+                Threshold();
         }
 
         protected abstract void SetCenter();
+        
 
-
-        private bool isColorInvalid = false;
+        private bool isDepthInvalid = false;
         private int fallbackSize = 168;
         // Because the training net requires a value between 0 and 255
         // One could make it the maximum possible for a depth frame that could be normalized by the client
         // or alternatively, output the normalized one beforehand as is done here.
         private ushort fallbackValue = 255;
 
-        private const int CubeSize = 200,
+        private const int CubeSize = 396,
                           CubeSizeZ = 300;
 
         private const float fx = 288.03f,
                             fy = 287.07f;
-
+        
         // Correspond to the boundaries of Virtual Frame computed by Segment()
         protected int xStart = 0, xEnd = 0, yStart = 0, yEnd = 0;
 
@@ -82,27 +65,78 @@ namespace KSIM.Readers
         // By default, an invalid value so that Segment() returns false
         protected float posX = -1.0f, posY = -1.0f;
 
+        private ushort posZ = 0;
 
         protected virtual bool Segment()
         {
-            if (posX < 0 || posY < 0)
-            {
-                xStart = (int)((Width / 2) - (CubeSize / 2));
-                xEnd = (int)((Width / 2) + (CubeSize / 2));
+            int index = IndexIntoDepthData(posX, posY);
+            if (index == -1)
+                return false;
 
-                yStart = (int)((Height / 2) - (CubeSize / 2));
-                yEnd = (int)((Height / 2) + (CubeSize / 2));
+            posZ = DepthData[index];
+
+            if (posZ == 0)
+                isDepthInvalid = true;
+
+            if (isDepthInvalid)
+            {
+                // The boundaries below use the fact that
+                // if depth is invalid (0), then the depth frame is
+                // all fallbackValue valued with size fallbackSize x fallbackSize
+                xStart = 0;
+                xEnd = fallbackSize;
+                yStart = 0;
+                yEnd = fallbackSize;
+                // Overwrite posX and posY because they are not in the original frame now
+                posX = fallbackSize / 2.0f;
+                posY = fallbackSize / 2.0f;
             }
             else
             {
-                xStart = (int)(posX - (CubeSize / 2));
-                xEnd = (int)(posX + (CubeSize / 2));
+                xStart = (int)((((posX * posZ / fx) - (CubeSize / 2.0)) / posZ) * fx);
+                xEnd = (int)((((posX * posZ / fx) + (CubeSize / 2.0)) / posZ) * fx);
 
-                yStart = (int)(posY - (CubeSize / 2));
-                yEnd = (int)(posY + (CubeSize / 2));
+                yStart = (int)((((posY * posZ / fy) - (CubeSize / 2.0)) / posZ) * fy);
+                yEnd = (int)((((posY * posZ / fy) + (CubeSize / 2.0)) / posZ) * fy);
+
+                Debug.Assert(xEnd > xStart);
+                Debug.Assert(yEnd > yStart);
             }
-            SetRectangle();
+
             return true;
+        }
+
+        public virtual void Threshold()
+        {
+            // Threshold bounds
+            double zStart = posZ - CubeSizeZ / 2.0,
+                   zEnd = posZ + CubeSizeZ / 2.0;
+
+            // The below logic relies on the fact that we have sane values for posX and posY
+            // If those are outside the actual frame, this will probably not work properly
+            int xStartInFrame = xStart >= 0 ? xStart : 0,
+                xEndInFrame = xEnd <= Width ? xEnd : Width,
+
+                yStartInFrame = yStart >= 0 ? yStart : 0,
+                yEndInFrame = yEnd <= Height ? yEnd : Height;
+
+            for (int xStartInBuffer = IndexIntoDepthData(xStartInFrame, yStartInFrame),
+                    xEndInBuffer = IndexIntoDepthData(xEndInFrame, yStartInFrame);
+                    xEndInBuffer <= depthData.Length;
+                    xStartInBuffer += Width, xEndInBuffer += Width)
+            {
+                for (int i = xStartInBuffer; i < xEndInBuffer; i++)
+                {
+                    if (isDepthInvalid)
+                        depthData[i] = fallbackValue;
+                    else if (depthData[i] == 0)
+                        depthData[i] = (ushort)zEnd;
+                    else if (depthData[i] > zEnd)
+                        depthData[i] = (ushort)zEnd;
+                    else if (depthData[i] < zStart)
+                        depthData[i] = (ushort)zStart;
+                }
+            }
         }
 
 
@@ -120,9 +154,12 @@ namespace KSIM.Readers
             // Note that BinaryWriter is documented to write data in little-endian form only
             Debug.Write(String.Format("{0} x {1}\n", SegmentedWidth, SegmentedHeight));
 
-            writer.Write(0);
             writer.Write(Segmented ? SegmentedWidth : 0);
             writer.Write(Segmented ? SegmentedHeight : 0);
+
+            // Position of hand in the segmented frame
+            writer.Write(Segmented ? posX - xStart : -1.0f);
+            writer.Write(Segmented ? posY - yStart : -1.0f);
 
             if (Segmented)
             {
@@ -189,66 +226,36 @@ namespace KSIM.Readers
                     for (int j = 0; j < SegmentedWidth; j++)
                         writer.Write((ushort)0);
 
-                int xStartInBuffer = IndexIntoColorData(xStartInFrame, yStartInFrame),
-                    xEndInBuffer = IndexIntoColorData(xEndInFrame, yStartInFrame);
+                int xStartInBuffer = IndexIntoDepthData(xStartInFrame, yStartInFrame),
+                    xEndInBuffer = IndexIntoDepthData(xEndInFrame, yStartInFrame);
 
                 Debug.Assert(SegmentedHeight == (prepend_rows + (yEndInFrame - yStartInFrame) + append_rows), String.Format("Mismatch in segmented height: {0} = {1} + ({2} - {3}) + {4}\n", SegmentedHeight, prepend_rows, yEndInFrame, yStartInFrame, append_rows));
 
                 Debug.Assert(SegmentedWidth == (prepend_zeros + (xEndInBuffer - xStartInBuffer) + append_zeros), String.Format("Mismatch in segmented width: {0} = {1} + ({2} - {3}) + {4}\n", SegmentedWidth, prepend_zeros, xEndInBuffer, xStartInBuffer, append_zeros));
 
-                croppedColorDataBitMap = colorDataBitmap.Clone(crop, System.Drawing.Imaging.PixelFormat.Format32bppRgb);
-                croppedColorDataBitMap.Save(compressedColorDataStream, ImageFormat.Jpeg);
-                //croppedColorDataBitMap.Save(compressedColorDataStream, ImageFormat.Bmp);
+                for (int i = 0; i < yEndInFrame - yStartInFrame; i++)
+                {
+                    // Zero columns to accound for some part of the virtual frame being to the left of actual frame
+                    for (int j = 0; j < prepend_zeros; j++)
+                        writer.Write((ushort)0);
 
-                writer.Write(compressedColorDataStream.ToArray().Length);
-                writer.Write(compressedColorDataStream.ToArray());
+                    for (int j = xStartInBuffer; j < xEndInBuffer; j++)
+                        writer.Write(depthData[j]);
+
+                    // Go to next row in actual frame
+                    xStartInBuffer += Width;
+                    xEndInBuffer += Width;
+
+                    // Zero columns to accound for some part of the virtual frame being to the right of actual frame
+                    for (int j = 0; j < append_zeros; j++)
+                        writer.Write((ushort)0);
+                }
 
                 // Zero rows to account for some part of the virtual frame being below the bottom boundary of actual frame
                 for (int i = 0; i < append_rows; i++)
                     for (int j = 0; j < SegmentedWidth; j++)
                         writer.Write((ushort)0);
             }
-        }
-
-        private void SetRectangle()
-        {
-            if(xStart < 0)
-            {
-                xStart = 0;
-                xEnd = CubeSize;
-            }
-            if(xEnd >= Width)
-            {
-                xEnd = Width - 1;
-                xStart = Width - CubeSize - 1;
-            }
-            if (yStart < 0)
-            {
-                yStart = 0;
-                yEnd = CubeSize;
-            }
-            if (yEnd >= Height)
-            {
-                yEnd = Height - 1;
-                yStart = Height - CubeSize - 1;
-            }
-            crop = new Rectangle(xStart, yStart, SegmentedWidth, SegmentedHeight);
-            //crop = new Rectangle(0, 0, Width, Height);
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (!disposed)
-            {
-                if (disposing)
-                {
-                    // TODO: dispose managed state (managed objects).
-                    if (underlyingClosestBodyFrame != null)
-                        underlyingClosestBodyFrame.Dispose();
-                }
-            }
-            disposed = true;
-            base.Dispose(disposing);
         }
     }
 }

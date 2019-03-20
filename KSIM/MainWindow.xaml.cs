@@ -1,22 +1,22 @@
-﻿using KSIM.Readers;
-using Microsoft.Kinect;
-using System;
+﻿using System;
 using System.IO;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
-using System.Threading;
-using Microsoft.Speech.AudioFormat;
-using Microsoft.Speech.Recognition;
 using System.Globalization;
 using System.Text;
 using System.Windows.Controls;
-using Microsoft.Speech.Recognition.SrgsGrammar;
-using Mono.Options;
-using SimpleServer;
 using System.Collections.Concurrent;
 using System.Net;
+
+using Microsoft.Speech.AudioFormat;
+using Microsoft.Speech.Recognition;
+using Microsoft.Speech.Recognition.SrgsGrammar;
+using Mono.Options;
+
+using KSIM.Frames;
+using KSIM.Kinect;
+using SimpleServer;
 
 namespace KSIM
 {
@@ -36,6 +36,10 @@ namespace KSIM
 
         private readonly Dictionary<FrameType, ConcurrentQueue<byte[]>> affixes = new Dictionary<FrameType, ConcurrentQueue<byte[]>>();
 
+        private readonly ConcurrentQueue<SpeechFrame> listSpeechFrame = new ConcurrentQueue<SpeechFrame>();
+
+        private readonly Queue<FaceFrameArrivedEventArgs> faceFrameArrivedEvents = new Queue<FaceFrameArrivedEventArgs>();
+
         /// <summary>
         /// The port at which the application listens for incoming stream requests for Kinect clients
         /// </summary>
@@ -45,7 +49,7 @@ namespace KSIM
 
         private string _grammarFile = "defaultGrammar.grxml";
 
-        private SimpleKinectSensor sensor;
+        private KinectSensor sensor;
 
         /// <summary>
         /// The server object to listen for incoming client requests
@@ -372,11 +376,12 @@ namespace KSIM
         private void Reader_SpeechRecognized(object sender, SpeechRecognizedEventArgs e)
         {
             var result = e.Result;
-            var sr = (SpeechReader)KSIM.Readers.FrameType.Speech.GetReader();
+            
             textBox.AppendText($"Phrase \"{result.Text}\" (confidence: {result.Confidence})\n");
             textBox.AppendText($"{result.Semantics["Tag"].Value},{result.Text}\n");
             textBox.ScrollToEnd();
-            sr.Store(result);
+
+            listSpeechFrame.Enqueue(new SpeechFrame(result));
         }
 
         /// <summary>
@@ -416,13 +421,15 @@ namespace KSIM
 
         private void InitializeKinect()
         {
-            sensor = new SimpleKinectSensor(SimpleKinectSensor.FrameType.Audio | SimpleKinectSensor.FrameType.Body
-                | SimpleKinectSensor.FrameType.Color | SimpleKinectSensor.FrameType.Depth | SimpleKinectSensor.FrameType.Face);
+            sensor = new KinectSensor(KinectSensor.FrameType.Audio | KinectSensor.FrameType.Body
+                | KinectSensor.FrameType.Color | KinectSensor.FrameType.Depth | KinectSensor.FrameType.Face);
             sensor.MultiSourceFrameArrived += OnMultiSourceFrameArrived;
+
+            sensor.FaceFrameArrived += OnFaceFrameArrived;
 
             if (sensor.AudioBeam != null)
             {
-                sensor.AudioBeam.AudioBeamMode = AudioBeamMode.Manual;
+                sensor.AudioBeam.AudioBeamMode = Microsoft.Kinect.AudioBeamMode.Manual;
                 // Beam angle is in Radians theroretically between -1.58 to 1.58 (+- 90 degrees)
                 // Practically, Kinect is limited to -0.87 to 0.87 (+- 90 degrees) with 5 degree increments
                 // Note that setting beam mode and beam angle will only work if the
@@ -444,39 +451,49 @@ namespace KSIM
                 throw new Exception("Unable to initialize Speech Engine");
         }
 
-        private void OnAudioBeamFrameArrived(object sender, SKAudioBeamFrameArrivedEventArgs e)
+        private void OnFaceFrameArrived(object sender, FaceFrameArrivedEventArgs e)
         {
-            var audioBeamList = e.Args.FrameReference.AcquireBeamFrames();
-
-            var f = (AudioFrame)KSIM.Readers.FrameType.Audio.GetReader().Read(audioBeamList);
-            if (f == null)
-                return;
-
-            f.Timestamp = e.Timestamp;
-
-
-            using (var ms = new MemoryStream())
+            if (e != null)
             {
-                f.Serialize(ms);
-                // Dispose quickly else Kinect will hang
-                f.Dispose();
-                // Cache
-                byte[] dataToSend = ms.ToArray();
-                lock (connectedAudioClients)
+                lock (faceFrameArrivedEvents)
                 {
-                    foreach (var client in connectedAudioClients)
+                    faceFrameArrivedEvents.Enqueue(e);
+                }
+            }
+        }
+
+        private void OnAudioBeamFrameArrived(object sender, AudioBeamFrameArrivedEventArgs e)
+        {
+            var audioBeamList = e.AudioBeamFrameList;
+            
+            if (audioBeamList != null)
+            {
+                var f = new AudioFrame(audioBeamList);
+                f.Timestamp = e.Timestamp;
+                using (var ms = new MemoryStream())
+                {
+                    f.Serialize(ms);
+                    // Cache
+                    byte[] dataToSend = ms.ToArray();
+                    lock (connectedAudioClients)
                     {
-                        client.Write(new Packet(dataToSend));
+                        foreach (var client in connectedAudioClients)
+                        {
+                            client.Write(new Packet(dataToSend));
+                        }
                     }
                 }
             }
         }
 
-        private void OnMultiSourceFrameArrived(object sender, SKMultiSourceFrameArrivedEventArgs e)
+        private void OnMultiSourceFrameArrived(object sender, MultiSourceFrameArrivedEventArgs e)
         {
-            MultiSourceFrame msf = e.Args.FrameReference.AcquireFrame();
-                       
-            Dictionary<Readers.FrameType, Readers.Frame> cachedFrames = new Dictionary<Readers.FrameType, Readers.Frame>();
+            if (e.BodyFrame == null)
+                return;
+
+            Dictionary<Frames.FrameType, Frames.Frame> cachedFrames = new Dictionary<Frames.FrameType, Frames.Frame>();
+            cachedFrames[Frames.FrameType.ClosestBody] = new ClosestBodyFrame(e.BodyFrame);
+            cachedFrames[Frames.FrameType.ClosestBody].Timestamp = e.Timestamp;
 
             // Will lock new connections until all previous clients are sent data
             lock (connectedClients)
@@ -488,17 +505,71 @@ namespace KSIM
                     {
                         if (!cachedFrames.ContainsKey(frameType))
                         {
-                            KSIM.Readers.Frame frame = frameType.GetReader().Read(msf);
+                            Frames.Frame frame = null;
+                            switch(frameType)
+                            {
+                                case Frames.FrameType.Color:
+                                    frame = e.ColorFrame != null ? new ColorFrame(e.ColorFrame) : null;
+                                    break;
+                                case Frames.FrameType.Depth:
+                                    frame = e.DepthFrame != null ? new DepthFrame(e.DepthFrame) : null;
+                                    break;
+                                case Frames.FrameType.HeadColor:                                                                                                            
+                                    frame = e.ColorFrame != null ? 
+                                        new HeadColorFrame(e.ColorFrame, cachedFrames[Frames.FrameType.ClosestBody] as ClosestBodyFrame) : null;
+                                    break;
+                                case Frames.FrameType.HeadDepth:
+                                    frame = e.DepthFrame != null ? 
+                                        new HeadDepthFrame(e.DepthFrame, cachedFrames[Frames.FrameType.ClosestBody] as ClosestBodyFrame) : null;
+                                    break;
+                                case Frames.FrameType.LHDepth:
+                                    frame = e.DepthFrame != null ?
+                                        new LHDepthFrame(e.DepthFrame, cachedFrames[Frames.FrameType.ClosestBody] as ClosestBodyFrame) : null;
+                                    break;
+                                case Frames.FrameType.RHDepth:
+                                    frame = e.DepthFrame != null ?
+                                        new RHDepthFrame(e.DepthFrame, cachedFrames[Frames.FrameType.ClosestBody] as ClosestBodyFrame) : null;
+                                    break;
+                                case Frames.FrameType.Speech:
+                                    SpeechFrame speechFrame = new SpeechFrame();
+                                    while (listSpeechFrame.TryDequeue(out SpeechFrame enqueuedSpeechFrame))
+                                        speechFrame += enqueuedSpeechFrame;
+                                    frame = speechFrame;
+                                    break;
+                                case Frames.FrameType.ClosestFace:
+                                    lock (faceFrameArrivedEvents)
+                                    {
+                                        while (faceFrameArrivedEvents.Count > 0)
+                                        {
+                                            var ev = faceFrameArrivedEvents.Dequeue();
+                                            if (ev.FaceFrameResult != null)
+                                            {
+                                                ClosestFaceFrame closestFaceFrame =
+                                                    new Frames.ClosestFaceFrame(ev.FaceFrameResult,
+                                                    cachedFrames[Frames.FrameType.ClosestBody] as ClosestBodyFrame);
+
+                                                if (closestFaceFrame.FaceFound)
+                                                    frame = closestFaceFrame;
+                                            }
+                                        }
+                                    }
+                                    if (frame == null)
+                                        frame = new ClosestFaceFrame();
+                                    
+                                    break;
+                                default:
+                                    break;
+                            }
+
                             if (frame != null)
                             {
                                 frame.Timestamp = e.Timestamp;
                                 cachedFrames[frameType] = frame;
                             }
-                            else
+                            else if (frameType != Frames.FrameType.Audio && frameType != Frames.FrameType.ClosestFace)
                             {
                                 // To ensure synchronization, do not send any frame if one of the subscribed ones is unavailable (null)
-                                // But we still need to dispose of the frames already cached
-                                goto DisposeFrames;
+                                return;
                             }
                         }
                     }
@@ -506,7 +577,7 @@ namespace KSIM
 
                 lock (affixes)
                 {
-                    foreach (Readers.Frame f in cachedFrames.Values)
+                    foreach (Frames.Frame f in cachedFrames.Values)
                     {
                         if (affixes[f.Type].TryDequeue(out byte[] affix))
                         {
@@ -514,8 +585,6 @@ namespace KSIM
                         }
                     }
                 }
-
-
 
                 // We are ensured that all the subscribed frames have already been cached
                 foreach (var client in connectedClients.Keys)
@@ -532,11 +601,6 @@ namespace KSIM
                     }
                 }
             }
-
-        DisposeFrames:
-            // Dispose frames quickly otherwise Kinect will hang
-            foreach (var frame in cachedFrames.Values)
-                frame.Dispose();
         }
 
         static Grammar LoadGrammar(string grammarPathString, bool forceCompile)

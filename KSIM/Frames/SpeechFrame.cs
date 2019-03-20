@@ -5,49 +5,11 @@ using System.Diagnostics;
 using System.Collections.Concurrent;
 using Microsoft.Speech.Recognition;
 
-namespace KSIM.Readers
+namespace KSIM.Frames
 {
-    class SpeechReader : Reader
-    {
-        // Singleton for SpeechReader
-        private static SpeechReader instance = new SpeechReader();
-
-        private static ConcurrentQueue<SpeechFrame> listSpeechFrame = new ConcurrentQueue<SpeechFrame>(); 
-        
-        private SpeechReader()
-        {
-
-        }
-
-        public static SpeechReader Instance()
-        {
-            return instance;
-        }
-
-        public override Frame Read(MultiSourceFrame f)
-        {
-            // Thread safe to call Read from multiple threads
-            SpeechFrame outFrame = new SpeechFrame();
-            
-            while(listSpeechFrame.TryDequeue(out SpeechFrame tempFrame))
-            {
-                outFrame += tempFrame;
-            }
-
-            return outFrame;
-        }
-
-        public void Store(RecognitionResult r)
-        {
-            listSpeechFrame.Enqueue(new SpeechFrame(r));
-        }
-    }
-
     class SpeechFrame : Frame
     {
         private const string _commandDelimiter = "/";
-
-        private bool disposed = false;
 
         private string command = "";
 
@@ -56,7 +18,7 @@ namespace KSIM.Readers
             get { return command.Length > 0; }
         }
 
-        private static double phraseConfidence = 0.3;
+        private const double phraseConfidence = 0.3;
 
         public SpeechFrame(RecognitionResult r)
         {
@@ -107,17 +69,6 @@ namespace KSIM.Readers
             byte[] dataToBeWritten = Encoding.ASCII.GetBytes(command);
             writer.Write(dataToBeWritten.Length);
             writer.Write(dataToBeWritten);
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (!disposed)
-            {
-                if (disposing)
-                {
-                }
-            }
-            disposed = true;
         }
     }
 }

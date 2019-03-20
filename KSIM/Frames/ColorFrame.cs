@@ -6,26 +6,10 @@ using System.Runtime.InteropServices;
 using System.Drawing;
 using System.Drawing.Imaging;
 
-namespace KSIM.Readers
+namespace KSIM.Frames
 {
-    public class ColorReader : Reader
-    {
-        public override Frame Read(MultiSourceFrame f)
-        {
-            // Note that we do not dispose the acquired frame
-            // that responsibility is delegated to newly created frame
-            var originalFrame = f.ColorFrameReference.AcquireFrame();
-
-            if (originalFrame == null)
-                return null;
-            else
-                return new ColorFrame(originalFrame);
-        }
-    }
-
     public class ColorFrame : Frame
     {
-        private bool disposed = false;
 
         private Microsoft.Kinect.ColorFrame underlyingColorFrame = null;
 
@@ -109,21 +93,6 @@ namespace KSIM.Readers
             // Compresses the colorData array into jpeg format in the compressedColorDataStream
             
             writer.Write(colorData);
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (!disposed)
-            {
-                if (disposing)
-                {
-                    // TODO: dispose managed state (managed objects).
-                    if (underlyingColorFrame != null)
-                        underlyingColorFrame.Dispose();
-                }
-                    
-                disposed = true;
-            }
         }
     }
 }

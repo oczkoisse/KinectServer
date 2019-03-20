@@ -3,37 +3,10 @@ using System.IO;
 using Microsoft.Kinect;
 using System.Diagnostics;
 
-namespace KSIM.Readers
+namespace KSIM.Frames
 {
-    class AudioReader : Reader
-    {
-        public override Frame Read(MultiSourceFrame f)
-        {
-            throw new NotImplementedException("AudioReader cannot read from a MultiSourceFrame. Pass AudioBeamFrame instead.");
-        }
-
-        public override Frame Read(AudioBeamFrameList lf)
-        {
-            if (lf != null && lf.Count > 0)
-            {
-                // Possible that there is no new audio
-                // Still must have a dummy audio frame
-                // unless there is a bigger problem like having zero audio beams
-                // TO CHECK: How often does this list be null? You don't want to skip other frames beacuse of this
-                var af =  new AudioFrame(lf);
-                if (af != null)
-                    return af;
-                else
-                    lf.Dispose();
-            }
-            return null;
-        }
-    }
-
     class AudioFrame : Frame
     {
-        private bool disposed = false;
-
         private AudioBeamFrameList beamFrameList = null;
 
         private AudioBeamFrame UnderlyingAudioFrame
@@ -98,19 +71,6 @@ namespace KSIM.Readers
             {
                 writer.Write(audioBuffer[i]);
             }
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (!disposed)
-            {
-                if (disposing)
-                {
-                    if (beamFrameList != null)
-                        beamFrameList.Dispose();
-                }
-            }
-            disposed = true;
         }
     }
 }

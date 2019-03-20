@@ -101,22 +101,23 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="SimpleKinect.cs" />
-    <Compile Include="Readers\HeadColorReader.cs" />
-    <Compile Include="Readers\SegmentedColorFrame.cs" />
-    <Compile Include="Readers\SpeechReader.cs" />
-    <Compile Include="Readers\AudioReader.cs" />
-    <Compile Include="Readers\ClosestBodyReader.cs" />
-    <Compile Include="Readers\ColorReader.cs" />
-    <Compile Include="Readers\DepthReader.cs" />
-    <Compile Include="Readers\HeadDepthReader.cs" />
-    <Compile Include="Readers\LHDepthReader.cs" />
-    <Compile Include="Readers\Pcm16Stream.cs" />
-    <Compile Include="Readers\Reader.cs" />
-    <Compile Include="Readers\RHDepthReader.cs" />
-    <Compile Include="Readers\SegmentedDepthFrame.cs" />
-    <Compile Include="SimpleKinectException.cs" />
-    <Compile Include="SKEventArgs.cs" />
+    <Compile Include="Frames\ClosestFaceFrame.cs" />
+    <Compile Include="Kinect\KinectSensor.cs" />
+    <Compile Include="Frames\HeadColorFrame.cs" />
+    <Compile Include="Frames\SegmentedColorFrame.cs" />
+    <Compile Include="Frames\SpeechFrame.cs" />
+    <Compile Include="Frames\AudioFrame.cs" />
+    <Compile Include="Frames\ClosestBodyFrame.cs" />
+    <Compile Include="Frames\ColorFrame.cs" />
+    <Compile Include="Frames\DepthFrame.cs" />
+    <Compile Include="Frames\HeadDepthFrame.cs" />
+    <Compile Include="Frames\LHDepthFrame.cs" />
+    <Compile Include="Pcm16Stream.cs" />
+    <Compile Include="Frames\Frame.cs" />
+    <Compile Include="Frames\RHDepthFrame.cs" />
+    <Compile Include="Frames\SegmentedDepthFrame.cs" />
+    <Compile Include="Kinect\KinectException.cs" />
+    <Compile Include="Kinect\KinectEventArgs.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

@@ -4,51 +4,19 @@ using Microsoft.Kinect;
 using System.IO;
 using System.Diagnostics;
 
-namespace KSIM.Readers
+namespace KSIM.Frames
 {
-    public sealed class ClosestBodyReader : Reader
-    {
-        private static ulong previousEngagedTrackingId = 0;
-
-        public override Frame Read(MultiSourceFrame f)
-        {
-            // Note that we do not dispose the acquired frame
-            // that responsibility is delegated to newly created frame
-            var originalFrame = f.BodyFrameReference.AcquireFrame();
-
-            if (originalFrame != null)
-            {
-                var cbf = new ClosestBodyFrame(originalFrame, previousEngagedTrackingId);
-                if (cbf.Engaged)
-                    previousEngagedTrackingId = cbf.TrackingId;
-                else
-                    previousEngagedTrackingId = 0;
-                return cbf;
-            }
-            
-            return null;
-        }
-    }
-
     public class ClosestBodyFrame : Frame
     {
-        private bool disposed = false;
-
         private readonly static double engageBeginBoundZ = 1.5;
         private readonly static double engageEndBoundZ = 5.0;
 
 
         private Body closestBody = null;
-        protected BodyFrame underlyingBodyFrame = null;
-
-        private byte trackedCount = 0;
 
         public byte TrackedCount
         {
-            get
-            {
-                return trackedCount;
-            }
+            get;
         }
 
         private static bool IsEngaged(Body body)
@@ -140,12 +108,11 @@ namespace KSIM.Readers
             get { return BodyFound ? closestIndex : -1; }
         }
 
-        
+        private static ulong lastEngagedTrackingId = 0;
 
-        public ClosestBodyFrame(Microsoft.Kinect.BodyFrame bf, ulong preferredTrackingId)
+        public ClosestBodyFrame(Microsoft.Kinect.BodyFrame bf)
         {
             Type = FrameType.ClosestBody;
-            this.underlyingBodyFrame = bf;
             
             Body[] bodies = new Body[bf.BodyCount];
             bf.GetAndRefreshBodyData(bodies);
@@ -157,13 +124,13 @@ namespace KSIM.Readers
                 var body = bodies[i];
 
                 if (body.IsTracked)
-                    trackedCount++;
+                    TrackedCount++;
 
                 double distance = DistanceFromKinect(body);
 
                 if (IsEngaged(distance))
                 {
-                    if (body.TrackingId == preferredTrackingId)
+                    if (body.TrackingId == lastEngagedTrackingId)
                     {
                         closestBody = body;
                         closestIndex = i;
@@ -177,8 +144,16 @@ namespace KSIM.Readers
                     }
                 }
             }
+
             // Enagaged implies BodyFound 
             Debug.Assert(!Engaged || BodyFound);
+
+            if (!BodyFound)
+                lastEngagedTrackingId = 0;
+            else if (TrackingId != lastEngagedTrackingId)
+            {
+                lastEngagedTrackingId = TrackingId;
+            }
 
             //Debug.WriteLine("Number of tracked bodies: {0}", trackedCount);
         }
@@ -240,20 +215,5 @@ namespace KSIM.Readers
                 }
             }
         }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (!disposed)
-            {
-                if (disposing)
-                {
-                    // TODO: dispose managed state (managed objects).
-                    if (underlyingBodyFrame != null)
-                        underlyingBodyFrame.Dispose();
-                }
-            }
-            disposed = true;
-        }
-
     }
 }

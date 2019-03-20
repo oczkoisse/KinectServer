@@ -3,27 +3,10 @@ using Microsoft.Kinect;
 using System.IO;
 using System.Collections.ObjectModel;
 
-namespace KSIM.Readers
+namespace KSIM.Frames
 {
-    public class DepthReader : Reader
-    {
-        public override Frame Read(MultiSourceFrame f)
-        {
-            // Note that we do not dispose the acquired frame
-            // that responsibility is delegated to newly created frame
-            var originalFrame = f.DepthFrameReference.AcquireFrame();
-            
-            if (originalFrame == null)
-                return null;
-            else
-                return new DepthFrame(originalFrame);
-        }
-    }
-
     public class DepthFrame : Frame
     {
-        private bool disposed = false;
-
         private Microsoft.Kinect.DepthFrame underlyingDepthFrame = null;
 
         protected Microsoft.Kinect.DepthFrame UnderlyingDepthFrame
@@ -95,20 +78,6 @@ namespace KSIM.Readers
 
             for (int i = 0; i < depthData.Length; i++)
                 writer.Write(depthData[i]);
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (!disposed)
-            {
-                if (disposing)
-                {
-                    // dispose managed state (managed objects)
-                    if (underlyingDepthFrame != null)
-                        underlyingDepthFrame.Dispose();
-                }
-            }
-            disposed = true;
         }
     }
 }

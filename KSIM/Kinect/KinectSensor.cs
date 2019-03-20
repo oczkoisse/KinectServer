@@ -3,21 +3,22 @@ using System.Threading;
 using Microsoft.Kinect;
 using Microsoft.Kinect.Face;
 
-namespace KSIM
+namespace KSIM.Kinect
 {
-    public class SimpleKinectSensor
+    public class KinectSensor
     {
         [Flags]
         public enum FrameType
         {
             Color = 1,
-            Depth = 2,
-            Body = 4,
-            Face = 8,
-            Audio = 16,
-            PCMAudio = 32
+            Infrared = 2,
+            Depth = 8,
+            BodyIndex = 16,
+            Body = 32,
+            Audio = 64,
+            Face = 128
         }
-
+        
         private readonly FrameType enabledFrames;
         private readonly FaceFrameFeatures faceFrameFeatures = FaceFrameFeatures.BoundingBoxInColorSpace
             | FaceFrameFeatures.BoundingBoxInInfraredSpace
@@ -32,19 +33,21 @@ namespace KSIM
             | FaceFrameFeatures.MouthOpen
             | FaceFrameFeatures.LookingAway;
 
-        private KinectSensor sensor;
+        private Microsoft.Kinect.KinectSensor sensor;
 
+        private Body[] bodies;
+        
         private MultiSourceFrameReader multiSourceFrameReader;
-        public event EventHandler<SKMultiSourceFrameArrivedEventArgs> MultiSourceFrameArrived;
+        public event EventHandler<MultiSourceFrameArrivedEventArgs> MultiSourceFrameArrived;
 
 
         private FaceFrameSource[] faceFrameSources;
         private FaceFrameReader[] faceFrameReaders;
-        public event EventHandler<SKFaceFrameArrivedEventArgs> FaceFrameArrived;
+        public event EventHandler<FaceFrameArrivedEventArgs> FaceFrameArrived;
         
         
         private AudioBeamFrameReader audioFrameReader;
-        public event EventHandler<SKAudioBeamFrameArrivedEventArgs> AudioBeamFrameArrived;
+        public event EventHandler<AudioBeamFrameArrivedEventArgs> AudioBeamFrameArrived;
         
         public AudioBeam AudioBeam
         {
@@ -81,30 +84,37 @@ namespace KSIM
             get => sensor?.CoordinateMapper;
         }
 
-        public SimpleKinectSensor(FrameType frames)
+        public KinectSensor(FrameType frames)
         {
             enabledFrames = frames;
 
-            sensor = KinectSensor.GetDefault();
+            sensor = Microsoft.Kinect.KinectSensor.GetDefault();
             if (sensor == null)
-                throw new SimpleKinectException("Failed to setup Kinect sensor");
+                throw new KinectException("Failed to setup Kinect sensor");
 
-            if (IsFrameTypeEnabled(FrameType.Color) || IsFrameTypeEnabled(FrameType.Depth) || IsFrameTypeEnabled(FrameType.Body))
+            if (IsFrameTypeEnabled(FrameType.Color) || IsFrameTypeEnabled(FrameType.Infrared) || IsFrameTypeEnabled(FrameType.Depth)
+                || IsFrameTypeEnabled(FrameType.BodyIndex) || IsFrameTypeEnabled(FrameType.Body))
+            {
                 InitializeMultiSourceFrameReader(sensor);
-            if (IsFrameTypeEnabled(FrameType.Face))
-                InitializeFaceFrameReader(sensor);
+            }
+
             if (IsFrameTypeEnabled(FrameType.Audio))
                 InitializeAudioFrameReader(sensor);
+
+            if (IsFrameTypeEnabled(FrameType.Face))
+                InitializeFaceFrameReader(sensor);
 
             sensor.Open();
         }  
 
         public bool IsFrameTypeEnabled(FrameType frameType) => frameType.HasFlag(frameType);
 
-        private void InitializeMultiSourceFrameReader(KinectSensor sensor)
+        private void InitializeMultiSourceFrameReader(Microsoft.Kinect.KinectSensor sensor)
         {
             if (sensor == null)
                 throw new ArgumentNullException("Sensor is null");
+
+            bodies = new Body[MaxTrackedBodies];
 
             FrameSourceTypes requestedFrames = FrameSourceTypes.None;
             if (IsFrameTypeEnabled(FrameType.Color))
@@ -113,19 +123,54 @@ namespace KSIM
                 requestedFrames |= FrameSourceTypes.Depth;
             if (IsFrameTypeEnabled(FrameType.Body))
                 requestedFrames |= FrameSourceTypes.Body;
+            if (IsFrameTypeEnabled(FrameType.Infrared))
+                requestedFrames |= FrameSourceTypes.Infrared;
+            if (IsFrameTypeEnabled(FrameType.BodyIndex))
+                requestedFrames |= FrameSourceTypes.BodyIndex;
 
             multiSourceFrameReader = sensor.OpenMultiSourceFrameReader(requestedFrames);
 
             multiSourceFrameReader.MultiSourceFrameArrived += OnMultiSourceFrameArrived;
         }
-        
-        private void OnMultiSourceFrameArrived(object sender, MultiSourceFrameArrivedEventArgs e)
+                
+        private void OnMultiSourceFrameArrived(object sender, Microsoft.Kinect.MultiSourceFrameArrivedEventArgs e)
         {
-            Timestamp = DateTime.Now.Ticks;
-            MultiSourceFrameArrived?.Invoke(sender, new SKMultiSourceFrameArrivedEventArgs(e, Timestamp));
+            long timestamp = DateTime.Now.Ticks;
+            Timestamp = timestamp;
+
+            var multiSourceFrame = e.FrameReference.AcquireFrame();
+
+            ColorFrame colorFrame = null;
+            DepthFrame depthFrame = null;
+            BodyFrame bodyFrame = null;
+            InfraredFrame infraredFrame = null;
+            BodyIndexFrame bodyIndexFrame = null;
+
+            try
+            {
+                colorFrame = multiSourceFrame.ColorFrameReference.AcquireFrame();
+                depthFrame = multiSourceFrame.DepthFrameReference.AcquireFrame();
+
+                bodyFrame = multiSourceFrame.BodyFrameReference.AcquireFrame();
+                bodyFrame?.GetAndRefreshBodyData(bodies);
+
+                infraredFrame = multiSourceFrame.InfraredFrameReference.AcquireFrame();
+                bodyIndexFrame = multiSourceFrame.BodyIndexFrameReference.AcquireFrame();
+
+                MultiSourceFrameArrived?.Invoke(this, new MultiSourceFrameArrivedEventArgs(timestamp, colorFrame, depthFrame,
+                    bodyFrame, bodyIndexFrame, infraredFrame));
+            }
+            finally
+            {
+                colorFrame?.Dispose();
+                depthFrame?.Dispose();
+                bodyFrame?.Dispose();
+                bodyIndexFrame?.Dispose();
+                infraredFrame?.Dispose();
+            }
         }
 
-        private void InitializeAudioFrameReader(KinectSensor sensor)
+        private void InitializeAudioFrameReader(Microsoft.Kinect.KinectSensor sensor)
         {
             if (sensor == null)
                 throw new ArgumentNullException("Sensor is null");
@@ -134,20 +179,30 @@ namespace KSIM
 
             var beams = sensor.AudioSource.AudioBeams;
             if (beams == null || beams.Count == 0)
-                throw new SimpleKinectException("Unable to retrieve audio beams from Kinect sensor");
+                throw new KinectException("Unable to retrieve audio beams from Kinect sensor");
 
             this.AudioBeam = beams[0];
 
             audioFrameReader.FrameArrived += OnAudioFrameArrived;
         }
 
-        private void OnAudioFrameArrived(object sender, AudioBeamFrameArrivedEventArgs e)
+        private void OnAudioFrameArrived(object sender, Microsoft.Kinect.AudioBeamFrameArrivedEventArgs e)
         {
-            AudioBeamFrameArrived?.Invoke(sender, new SKAudioBeamFrameArrivedEventArgs(e, Timestamp));
+            AudioBeamFrameList audioBeamFrameList = null;
+            long timestamp = Timestamp;
+            try
+            {
+                audioBeamFrameList = e.FrameReference.AcquireBeamFrames();
+                AudioBeamFrameArrived?.Invoke(this, new AudioBeamFrameArrivedEventArgs(timestamp, audioBeamFrameList));
+            }
+            finally
+            {
+                audioBeamFrameList?.Dispose();
+            }
         }
         
 
-        private void InitializeFaceFrameReader(KinectSensor sensor)
+        private void InitializeFaceFrameReader(Microsoft.Kinect.KinectSensor sensor)
         {
             if (sensor == null)
                 throw new ArgumentNullException("Sensor is null");
@@ -164,9 +219,43 @@ namespace KSIM
             }
         }
 
-        private void OnFaceFrameArrived(object sender, FaceFrameArrivedEventArgs e)
+        private bool TryGetFaceFrameSourceIndex(FaceFrameSource faceFrameSource, out int index)
         {
-            FaceFrameArrived?.Invoke(sender, new SKFaceFrameArrivedEventArgs(e, Timestamp));
+            for (int i=0; i < faceFrameSources.Length; i++)
+            {
+                if (faceFrameSources[i] == faceFrameSource)
+                {
+                    index = i;
+                    return true;
+                }
+            }
+            index = -1;
+            return false;
+        }
+
+        private void OnFaceFrameArrived(object sender, Microsoft.Kinect.Face.FaceFrameArrivedEventArgs e)
+        {
+            long timestamp = Timestamp;
+            FaceFrame faceFrame = null;
+            try
+            {
+                faceFrame = e.FrameReference.AcquireFrame();
+                if (TryGetFaceFrameSourceIndex(faceFrame.FaceFrameSource, out int index))
+                {
+                    if (faceFrameSources[index].IsTrackingIdValid)
+                    {
+                        FaceFrameArrived?.Invoke(this, new FaceFrameArrivedEventArgs(timestamp, faceFrame.FaceFrameResult));
+                    }
+                    else if (bodies[index] != null && bodies[index].IsTracked)
+                    {
+                        faceFrameSources[index].TrackingId = bodies[index].TrackingId;
+                    }
+                }
+            }
+            finally
+            {
+                faceFrame?.Dispose();
+            }
         }
 
         public void Close()

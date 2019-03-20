@@ -1,14 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace KSIM.Readers
+namespace KSIM
 {
-    
-
     /// <summary>
     /// Wrapper Stream Class to Support 32->16bit conversion and support Speech call to Seek
     /// </summary>
