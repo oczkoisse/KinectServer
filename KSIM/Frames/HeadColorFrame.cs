@@ -11,7 +11,7 @@ namespace KSIM.Frames
     {
         public HeadColorFrame(Microsoft.Kinect.ColorFrame cf, ClosestBodyFrame cbf) : base(cf, cbf)
         {
-            Type = FrameType.HeadDepth;
+            Type = FrameType.HeadColor;
         }
 
         protected override void SetCenter()
