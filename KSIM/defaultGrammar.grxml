@@ -2,39 +2,43 @@
 <grammar root="rule" tag-format="semantics/1.0" version="1.0" xml:lang="en-US" xmlns="http://www.w3.org/2001/06/grammar">
   <rule id="rule">
     <one-of>
-      <item weight="20">
+      <item weight="3">
+        <ruleref uri="#stall"/>
+        <tag>out.Tag=&quot;S&quot;;</tag>
+      </item>
+      <item weight="2">
         <ruleref uri="#answersFull"/>
         <tag>out.Tag=&quot;S&quot;;</tag>
       </item>
-      <item weight=".1">
-        <ruleref uri="#block"/>
+      <item weight="1">
+        <ruleref uri="#nounPhrase"/>
         <tag>out.Tag=&quot;NP&quot;;</tag>
       </item>
-      <item weight=".1">
+      <item weight="1">
         <ruleref uri="#destFull"/>
         <tag>out.Tag=&quot;PP&quot;;</tag>
       </item>
-      <item weight=".1">
+      <item weight="1">
         <ruleref uri="#selectFull"/>
         <tag>out.Tag=&quot;VP&quot;;</tag>
       </item>
-      <item weight=".1">
+      <item weight="1">
         <ruleref uri="#slideFull"/>
         <tag>out.Tag=&quot;VP&quot;;</tag>
       </item>
-      <item weight=".1">
+      <item weight="1">
         <ruleref uri="#liftmoveFull"/>
         <tag>out.Tag=&quot;VP&quot;;</tag>
       </item>
-      <item weight=".1">
-        <ruleref uri="#blockNumQFull"/>
+      <item weight="1">
+        <ruleref uri="#nounNumQFull"/>
         <tag>out.Tag=&quot;SQ&quot;;</tag>
       </item>
-      <item weight=".1">
-        <ruleref uri="#blockLocQFull"/>
+      <item weight="1">
+        <ruleref uri="#nounLocQFull"/>
         <tag>out.Tag=&quot;SQ&quot;;</tag>
       </item>
-      <item weight=".1">
+      <item weight="1">
         <ruleref uri="#wave"/>
         <tag>out.Tag=&quot;S&quot;;</tag>
       </item>
@@ -72,15 +76,19 @@
     </one-of>
   </rule>
   <rule id="transition">
-    <item repeat="0-">
+    <item>
       <item>
-        <ruleref uri="#dysfl"/>
+        <item repeat="0-1">
+          <ruleref uri="#dysfl"/>
+        </item>
       </item>
       <item>
         <ruleref uri="#connectives"/>
       </item>
       <item>
-        <ruleref uri="#dysfl"/>
+        <item repeat="0-1">
+          <ruleref uri="#dysfl"/>
+        </item>
       </item>
     </item>
   </rule>
@@ -136,6 +144,18 @@
     </item>
   </rule>
   <rule id="diana">diana</rule>
+  <rule id="stall">
+    <item>
+      <item>
+        <ruleref uri="#transition"/>
+      </item>
+      <item>
+        <item repeat="0-1">
+          <ruleref uri="#politePreambles"/>
+        </item>
+      </item>
+    </item>
+  </rule>
   <rule id="det">
     <one-of>
       <item>a</item>
@@ -151,62 +171,134 @@
       <item>black</item>
       <item>white</item>
       <item>orange</item>
+      <item>blue</item>
+      <item>silver</item>
     </one-of>
   </rule>
-  <rule id="demonstratives">
+  <rule id="adjectives">
+    <ruleref uri="#colors"/>
+  </rule>
+  <rule id="demonstrativesSg">
     <one-of>
       <item>this</item>
       <item>that</item>
     </one-of>
   </rule>
-  <rule id="refs">
+  <rule id="demonstrativesPl">
     <one-of>
-      <item>one</item>
-      <item>block</item>
-      <item>box</item>
+      <item>these</item>
+      <item>those</item>
     </one-of>
   </rule>
-  <rule id="block">
-    <item>
-      <one-of>
+  <rule id="detSg">
+    <one-of>
+      <item>a</item>
+      <item>the</item>
+      <item>
+        <ruleref uri="#demonstrativesSg"/>
+      </item>
+    </one-of>
+  </rule>
+  <rule id="detPl">
+    <one-of>
+      <item>the</item>
+      <item>
+        <ruleref uri="#demonstrativesSg"/>
+      </item>
+    </one-of>
+  </rule>
+  <rule id="refs">one</rule>
+  <rule id="atomicNounSg">
+    <one-of>
+      <item>block</item>
+      <item>box</item>
+      <item>mug</item>
+      <item>cup</item>
+      <item>plate</item>
+      <item>spoon</item>
+      <item>fork</item>
+      <item>knife</item>
+    </one-of>
+  </rule>
+  <rule id="atomicNounPl">
+    <one-of>
+      <item>blocks</item>
+      <item>boxes</item>
+      <item>mugs</item>
+      <item>cups</item>
+      <item>plates</item>
+      <item>spoons</item>
+      <item>forks</item>
+      <item>knives</item>
+    </one-of>
+  </rule>
+  <rule id="nounPhraseSg">
+    <one-of>
+      <item>
         <item>
           <item>
             <item>
-              <item>
-                <one-of>
-                  <item>
-                    <item>
-                      <item>
-                        <item repeat="0-1">
-                          <ruleref uri="#det"/>
-                        </item>
-                      </item>
-                      <item>
-                        <ruleref uri="#colors"/>
-                      </item>
-                      <item>
-                        <item repeat="0-1">
-                          <ruleref uri="#dysfl"/>
-                        </item>
-                      </item>
-                    </item>
-                  </item>
-                  <item>
-                    <ruleref uri="#demonstratives"/>
-                  </item>
-                </one-of>
+              <item repeat="0-1">
+                <ruleref uri="#detSg"/>
               </item>
             </item>
             <item>
               <item repeat="0-1">
-                <ruleref uri="#refs"/>
+                <ruleref uri="#adjectives"/>
               </item>
+            </item>
+            <item>
+              <item repeat="0-1">
+                <ruleref uri="#dysfl"/>
+              </item>
+            </item>
+            <item>
+              <ruleref uri="#atomicNounSg"/>
             </item>
           </item>
         </item>
-        <item>it</item>
-      </one-of>
-    </item>
+      </item>
+      <item>it</item>
+    </one-of>
+  </rule>
+  <rule id="nounPhrasePl">
+    <one-of>
+      <item>
+        <item>
+          <item>
+            <item>
+              <item repeat="0-1">
+                <ruleref uri="#detPl"/>
+              </item>
+            </item>
+            <item>
+              <item repeat="0-1">
+                <ruleref uri="#adjectives"/>
+              </item>
+            </item>
+            <item>
+              <item repeat="0-1">
+                <ruleref uri="#dysfl"/>
+              </item>
+            </item>
+            <item>
+              <ruleref uri="#atomicNounPl"/>
+            </item>
+          </item>
+        </item>
+      </item>
+      <item>them</item>
+    </one-of>
+  </rule>
+  <rule id="nounPhrase">
+    <one-of>
+      <item>
+        <ruleref uri="#nounPhraseSg"/>
+      </item>
+      <item>
+        <ruleref uri="#nounPhrasePl"/>
+      </item>
+    </one-of>
   </rule>
   <rule id="xDir">
     <one-of>
@@ -226,7 +318,9 @@
           </item>
         </item>
       </item>
-      <item>the</item>
+      <item>
+        <item repeat="0-1">the</item>
+      </item>
       <item>
         <ruleref uri="#xDir"/>
       </item>
@@ -292,7 +386,7 @@
         </item>
       </item>
       <item>
-        <ruleref uri="#block"/>
+        <ruleref uri="#nounPhrase"/>
       </item>
     </item>
   </rule>
@@ -438,19 +532,37 @@
     </one-of>
   </rule>
   <rule id="select">
-    <item>
+    <one-of>
       <item>
-        <ruleref uri="#selectVerbs"/>
-      </item>
-      <item>
-        <item repeat="0-1">
-          <ruleref uri="#dysfl"/>
+        <item>
+          <item>
+            <ruleref uri="#selectVerbs"/>
+          </item>
+          <item>
+            <item repeat="0-1">
+              <ruleref uri="#dysfl"/>
+            </item>
+          </item>
+          <item>
+            <ruleref uri="#nounPhrase"/>
+          </item>
         </item>
       </item>
       <item>
-        <ruleref uri="#block"/>
+        <item>
+          <item>pick</item>
+          <item>
+            <item repeat="0-1">
+              <ruleref uri="#dysfl"/>
+            </item>
+          </item>
+          <item>
+            <ruleref uri="#nounPhrase"/>
+          </item>
+          <item>up</item>
+        </item>
       </item>
-    </item>
+    </one-of>
   </rule>
   <rule id="selectFull">
     <item>
@@ -490,7 +602,7 @@
         </item>
       </item>
       <item>
-        <ruleref uri="#block"/>
+        <ruleref uri="#nounPhrase"/>
       </item>
       <item>
         <ruleref uri="#dest"/>
@@ -533,7 +645,7 @@
         </item>
       </item>
       <item>
-        <ruleref uri="#block"/>
+        <ruleref uri="#nounPhrase"/>
       </item>
       <item>
         <ruleref uri="#dest"/>
@@ -579,12 +691,12 @@
   <rule id="answersFull">
     <ruleref uri="#answers"/>
   </rule>
-  <rule id="blockNumQ">
+  <rule id="nounNumQ">
     <item>
       <item>how</item>
       <item>many</item>
       <item>
-        <item repeat="0-1">blocks</item>
+        <ruleref uri="#atomicNounPl"/>
       </item>
     </item>
   </rule>
@@ -660,7 +772,7 @@
       </item>
     </item>
   </rule>
-  <rule id="blockNumQDir">
+  <rule id="nounNumQDir">
     <item>
       <item>
         <item repeat="0-1">
@@ -668,7 +780,7 @@
         </item>
       </item>
       <item>
-        <ruleref uri="#blockNumQ"/>
+        <ruleref uri="#nounNumQ"/>
       </item>
       <item>
         <item repeat="0-1">
@@ -686,13 +798,13 @@
       </item>
     </item>
   </rule>
-  <rule id="blockNumQIndir">
+  <rule id="nounNumQIndir">
     <item>
       <item>
         <ruleref uri="#askPreambles"/>
       </item>
       <item>
-        <ruleref uri="#blockNumQ"/>
+        <ruleref uri="#nounNumQ"/>
       </item>
       <item>
         <item>
@@ -708,19 +820,19 @@
       </item>
     </item>
   </rule>
-  <rule id="blockNumQFull">
+  <rule id="nounNumQFull">
     <item>
       <one-of>
         <item>
-          <ruleref uri="#blockNumQDir"/>
+          <ruleref uri="#nounNumQDir"/>
         </item>
         <item>
-          <ruleref uri="#blockNumQIndir"/>
+          <ruleref uri="#nounNumQIndir"/>
         </item>
       </one-of>
     </item>
   </rule>
-  <rule id="blockLocQDir">
+  <rule id="nounLocQDir">
     <item>
       <item>
         <item repeat="0-1">
@@ -730,30 +842,30 @@
       <item>where</item>
       <item>is</item>
       <item>
-        <ruleref uri="#block"/>
+        <ruleref uri="#nounPhrase"/>
       </item>
     </item>
   </rule>
-  <rule id="blockLocQIndir">
+  <rule id="nounLocQIndir">
     <item>
       <item>
         <ruleref uri="#askPreambles"/>
       </item>
       <item>where</item>
       <item>
-        <ruleref uri="#block"/>
+        <ruleref uri="#nounPhrase"/>
       </item>
       <item>is</item>
     </item>
   </rule>
-  <rule id="blockLocQFull">
+  <rule id="nounLocQFull">
     <item>
       <one-of>
         <item>
-          <ruleref uri="#blockLocQDir"/>
+          <ruleref uri="#nounLocQDir"/>
         </item>
         <item>
-          <ruleref uri="#blockLocQIndir"/>
+          <ruleref uri="#nounLocQIndir"/>
         </item>
       </one-of>
     </item>
