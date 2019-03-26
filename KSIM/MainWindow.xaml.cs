@@ -112,6 +112,8 @@ namespace KSIM
                 }
             };
 
+			_grammarFile = Path.Combine(System.AppContext.BaseDirectory, _grammarFile);
+
             try
             {
                 p.Parse(args);
