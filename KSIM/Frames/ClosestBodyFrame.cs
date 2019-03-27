@@ -8,8 +8,8 @@ namespace KSIM.Frames
 {
     public class ClosestBodyFrame : Frame
     {
-        private readonly static double engageBeginBoundZ = 1.5;
-        private readonly static double engageEndBoundZ = 5.0;
+        private static double engageBeginBoundZ;
+        private static double engageEndBoundZ;
 
 
         private Body closestBody = null;
@@ -110,11 +110,14 @@ namespace KSIM.Frames
 
         private static ulong lastEngagedTrackingId = 0;
 
-        public ClosestBodyFrame(Microsoft.Kinect.BodyFrame bf)
+        public ClosestBodyFrame(Microsoft.Kinect.BodyFrame bf, double engageMin, double engageMax)
         {
             Type = FrameType.ClosestBody;
-            
-            Body[] bodies = new Body[bf.BodyCount];
+
+			engageBeginBoundZ = engageMin;
+			engageEndBoundZ = engageMax;
+
+			Body[] bodies = new Body[bf.BodyCount];
             bf.GetAndRefreshBodyData(bodies);
 
             double closestDistance = Double.MaxValue;

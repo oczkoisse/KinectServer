@@ -8,7 +8,7 @@ using System.Text;
 using System.Windows.Controls;
 using System.Collections.Concurrent;
 using System.Net;
-
+using System.Configuration;
 using Microsoft.Speech.AudioFormat;
 using Microsoft.Speech.Recognition;
 using Microsoft.Speech.Recognition.SrgsGrammar;
@@ -46,6 +46,10 @@ namespace KSIM
         private static int port = 8000;
 
         private static bool listenFromKinect = false;
+
+		private static double engageMin = 1.5;
+
+		private static double engageMax = 5;
 
         private string _grammarFile = "defaultGrammar.grxml";
 
@@ -148,7 +152,13 @@ namespace KSIM
             server.Start();
             InitializeComponent();
             textBox.Clear();
-            textBox.AppendText(string.Format("App started at port {0} using {1} microphone and {2} grammar",
+
+			engageMin = double.Parse(ConfigurationManager.AppSettings["engage_distance_min"]);
+			engageMax = double.Parse(ConfigurationManager.AppSettings["engage_distance_max"]);
+
+			textBox.AppendText(string.Format("Engage distance min {0} and max {1}\n", engageMin, engageMax));
+
+			textBox.AppendText(string.Format("App started at port {0} using {1} microphone and {2} grammar",
                 port, listenFromKinect ? "kinect" : "normal", _grammarFile));
             foreach (FrameType ft in (FrameType[])Enum.GetValues(typeof(FrameType)))
             {
@@ -423,7 +433,7 @@ namespace KSIM
 
         private void InitializeKinect()
         {
-            sensor = new KinectSensor(KinectSensor.FrameType.Audio | KinectSensor.FrameType.Body
+			sensor = new KinectSensor(KinectSensor.FrameType.Audio | KinectSensor.FrameType.Body
                 | KinectSensor.FrameType.Color | KinectSensor.FrameType.Depth | KinectSensor.FrameType.Face);
             sensor.MultiSourceFrameArrived += OnMultiSourceFrameArrived;
 
@@ -494,7 +504,7 @@ namespace KSIM
                 return;
 
             Dictionary<Frames.FrameType, Frames.Frame> cachedFrames = new Dictionary<Frames.FrameType, Frames.Frame>();
-            cachedFrames[Frames.FrameType.ClosestBody] = new ClosestBodyFrame(e.BodyFrame);
+            cachedFrames[Frames.FrameType.ClosestBody] = new ClosestBodyFrame(e.BodyFrame, engageMin, engageMax);
             cachedFrames[Frames.FrameType.ClosestBody].Timestamp = e.Timestamp;
 
             // Will lock new connections until all previous clients are sent data
