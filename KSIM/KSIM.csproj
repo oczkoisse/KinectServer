@@ -113,6 +113,10 @@
     <Compile Include="Frames\DepthFrame.cs" />
     <Compile Include="Frames\HeadDepthFrame.cs" />
     <Compile Include="Frames\LHDepthFrame.cs" />
+    <Compile Include="Speech\SpeechResult.cs" />
+    <Compile Include="Speech\SpeechRecognizer.cs" />
+    <Compile Include="Speech\MicrosoftSpeechRecognizer.cs" />
+    <Compile Include="Speech\WatsonSpeechRecognizer.cs" />
     <Compile Include="Pcm16Stream.cs" />
     <Compile Include="Frames\Frame.cs" />
     <Compile Include="Frames\RHDepthFrame.cs" />

@@ -11,7 +11,6 @@ using System.Net;
 using System.Configuration;
 using Microsoft.Speech.AudioFormat;
 using Microsoft.Speech.Recognition;
-using Microsoft.Speech.Recognition.SrgsGrammar;
 using Mono.Options;
 
 using KSIM.Frames;
@@ -53,7 +52,7 @@ namespace KSIM
 
         private string _grammarFile = "defaultGrammar.grxml";
 
-        private KinectSensor sensor;
+        public KinectSensor sensor;
 
         /// <summary>
         /// The server object to listen for incoming client requests
@@ -70,20 +69,7 @@ namespace KSIM
         /// </summary>
         private List<Connection> connectedAudioClients = new List<Connection>();
 
-        private List<Connection> connectedVoxSimClients = new List<Connection>();
-        
-        /// <summary>
-        /// Conversion stream needed to convert the raw 32 bit floating point samples emitted by Kinect into PCM 16 bit data
-        /// that can be recognized by the SpeechRecognitionEngine.
-        /// Needed to speechActive = false at application exit
-        /// </summary>
-        private Pcm16Stream audioStream;
-
-        /// <summary>
-        /// Reference to the SpeechRecognitionEngine. Needed to stop async recogntion at the application exit.
-        /// </summary>
-        private static SpeechRecognitionEngine speechEngine;
-        
+        private List<Connection> connectedVoxSimClients = new List<Connection>();       
         
         /// <summary>
         /// The constructor for MainWindow class.
@@ -385,53 +371,23 @@ namespace KSIM
             }
         }
 
-        private void Reader_SpeechRecognized(object sender, SpeechRecognizedEventArgs e)
-        {
-            var result = e.Result;
-            
-            textBox.AppendText($"Phrase \"{result.Text}\" (confidence: {result.Confidence})\n");
-            textBox.AppendText($"{result.Semantics["Tag"].Value},{result.Text}\n");
-            textBox.ScrollToEnd();
+		public static bool CheckForInternetConnection()
+		{
+			try
+			{
+				using (var client = new WebClient())
+				using (client.OpenRead("http://clients3.google.com/generate_204"))
+				{
+					return true;
+				}
+			}
+			catch
+			{
+				return false;
+			}
+		}
 
-            listSpeechFrame.Enqueue(new SpeechFrame(result));
-        }
-
-        /// <summary>
-        /// Gets the metadata for the speech recognizer (acoustic model) most suitable to
-        /// process audio from Kinect device.
-        /// </summary>
-        /// <returns>
-        /// RecognizerInfo if found, <code>null</code> otherwise.
-        /// </returns>
-        private static RecognizerInfo TryGetKinectRecognizer()
-        {
-            IEnumerable<RecognizerInfo> recognizers;
-
-            // This is required to catch the case when an expected recognizer is not installed.
-            // By default - the x86 Speech Runtime is always expected. 
-            try
-            {
-                recognizers = SpeechRecognitionEngine.InstalledRecognizers();
-            }
-            catch (System.Runtime.InteropServices.COMException)
-            {
-                return null;
-            }
-
-            foreach (RecognizerInfo recognizer in recognizers)
-            {
-                string value;
-                recognizer.AdditionalInfo.TryGetValue("Kinect", out value);
-                if ("True".Equals(value, StringComparison.OrdinalIgnoreCase) && "en-US".Equals(recognizer.Culture.Name, StringComparison.OrdinalIgnoreCase))
-                {
-                    return recognizer;
-                }
-            }
-
-            return null;
-        }
-
-        private void InitializeKinect()
+		private void InitializeKinect()
         {
 			sensor = new KinectSensor(KinectSensor.FrameType.Audio | KinectSensor.FrameType.Body
                 | KinectSensor.FrameType.Color | KinectSensor.FrameType.Depth | KinectSensor.FrameType.Face);
@@ -615,38 +571,9 @@ namespace KSIM
             }
         }
 
-        static Grammar LoadGrammar(string grammarPathString, bool forceCompile)
-        {
-            if (grammarPathString == null)
-            {
-                return null;
-            }
-
-            string compiledGrammarPathString;
-            string grammarExtension = Path.GetExtension(grammarPathString);
-            if (grammarExtension.Equals(".grxml", StringComparison.OrdinalIgnoreCase)) {
-                compiledGrammarPathString = Path.ChangeExtension(grammarPathString, "cfg");
-            } else if (grammarExtension.Equals(".cfg", StringComparison.OrdinalIgnoreCase)) {
-                compiledGrammarPathString = grammarPathString;
-            } else {
-                throw new FormatException("Grammar file format is unsupported: " + grammarExtension);
-            }
-
-            // skip cpmpilation if "cfg" grammar already exists
-            if (forceCompile || !File.Exists(compiledGrammarPathString))
-            {
-                FileStream fs = new FileStream(compiledGrammarPathString, FileMode.Create);
-                var srgs = new SrgsDocument(grammarPathString);
-                SrgsGrammarCompiler.Compile(srgs, fs);
-                fs.Close();
-            }
-
-            return new Grammar(compiledGrammarPathString);
-        }
-
-        private bool InitializeSpeechEngine(string grammarFileName)
-        {
-            Grammar g = LoadGrammar(grammarFileName, true);
+		private bool InitializeSpeechEngine(string grammarFileName)
+		{
+			Grammar g = LoadGrammar(grammarFileName, true);
 
             if (g != null)
             {
