@@ -18,8 +18,15 @@ namespace KSIM.Frames
     {
         private Rectangle crop; // Determines area to crop
         private Bitmap croppedColorDataBitMap = null; // Creates a bitmap of the cropped image
+		
+		private Microsoft.Kinect.DepthFrame underlyingDepthFrame = null;
 
-        private ClosestBodyFrame underlyingClosestBodyFrame = null;
+		protected Microsoft.Kinect.DepthFrame UnderlyingDepthFrame
+		{
+			get { return underlyingDepthFrame; }
+		}
+
+		private ClosestBodyFrame underlyingClosestBodyFrame = null;
 
         protected ClosestBodyFrame UnderlyingClosestBodyFrame
         {
@@ -47,14 +54,20 @@ namespace KSIM.Frames
             get { return segmented; }
         }
 
-        public SegmentedColorFrame(Microsoft.Kinect.ColorFrame cf, ClosestBodyFrame cbf) : base(cf)
+        public SegmentedColorFrame(Microsoft.Kinect.ColorFrame cf, Microsoft.Kinect.DepthFrame df, ClosestBodyFrame cbf) : base(cf)
         {
             underlyingClosestBodyFrame = cbf;
 
             SetCenter();
 
-            // If unable to segment, then the reader should return a null frame
-            segmented = Segment();
+			//DepthSpacePoint[] depthToColor = new array 1920x1080
+			//CoordinateMapper.MapColorFrameToDepthSpace(cf, out depthToColor)
+			//byte[] body_depth = for all pixels: if pixel z outside center z +/- 10?: save to return value 
+			//byte[] body_color = map all face depth pixels to color space, for all 
+			//zeroFn(colorDataBitmap, face_color) // zero out all non-face color pixels
+
+			// If unable to segment, then the reader should return a null frame
+			segmented = Segment();  // in here we get 4 rectangle points, also map these to depth space and crop the depth frame
             // No need to threshold because there is no depth data
         }
 
@@ -195,7 +208,7 @@ namespace KSIM.Frames
 
                 Debug.Assert(SegmentedWidth == (prepend_zeros + (xEndInBuffer - xStartInBuffer) + append_zeros), String.Format("Mismatch in segmented width: {0} = {1} + ({2} - {3}) + {4}\n", SegmentedWidth, prepend_zeros, xEndInBuffer, xStartInBuffer, append_zeros));
 
-                croppedColorDataBitMap = colorDataBitmap.Clone(crop, System.Drawing.Imaging.PixelFormat.Format32bppRgb);
+				croppedColorDataBitMap = colorDataBitmap.Clone(crop, System.Drawing.Imaging.PixelFormat.Format32bppRgb);
                 croppedColorDataBitMap.Save(compressedColorDataStream, ImageFormat.Jpeg);
                 //croppedColorDataBitMap.Save(compressedColorDataStream, ImageFormat.Bmp);
 

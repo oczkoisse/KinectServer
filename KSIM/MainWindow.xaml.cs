@@ -516,7 +516,7 @@ namespace KSIM
                                     break;
                                 case Frames.FrameType.HeadColor:                                                                                                            
                                     frame = e.ColorFrame != null ? 
-                                        new HeadColorFrame(e.ColorFrame, cachedFrames[Frames.FrameType.ClosestBody] as ClosestBodyFrame) : null;
+                                        new HeadColorFrame(e.ColorFrame, e.DepthFrame, cachedFrames[Frames.FrameType.ClosestBody] as ClosestBodyFrame) : null;
                                     break;
                                 case Frames.FrameType.HeadDepth:
                                     frame = e.DepthFrame != null ? 

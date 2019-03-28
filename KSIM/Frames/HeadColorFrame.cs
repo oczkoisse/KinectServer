@@ -9,7 +9,7 @@ namespace KSIM.Frames
 {
     public sealed class HeadColorFrame : SegmentedColorFrame
     {
-        public HeadColorFrame(Microsoft.Kinect.ColorFrame cf, ClosestBodyFrame cbf) : base(cf, cbf)
+        public HeadColorFrame(Microsoft.Kinect.ColorFrame cf, Microsoft.Kinect.DepthFrame df, ClosestBodyFrame cbf) : base(cf, df, cbf)
         {
             Type = FrameType.HeadColor;
         }
