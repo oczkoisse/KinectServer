@@ -268,11 +268,11 @@ namespace KSIM
             }
             catch (EndOfStreamException)
             {
-                conn.Close();
+                RemoveConnection(conn);
             }
             catch (IOException)
             {
-                conn.Close();
+                RemoveConnection(conn);
             }
         }
 
@@ -303,9 +303,22 @@ namespace KSIM
 
         private void HandleRecognizerRegistration(Connection conn, BinaryReader br)
         {
+            int requestedFrames = -1;
             try
             {
-                int requestedFrames = br.ReadInt32();
+                requestedFrames = br.ReadInt32();
+            }
+            catch (EndOfStreamException ex)
+            {
+                conn.Close();
+            }
+            catch(IOException ex)
+            {
+                conn.Close();
+            }
+
+            if (requestedFrames != -1)
+            {
                 List<FrameType> activeFrames = GetActiveFrames(requestedFrames);
 
                 if (activeFrames.Count >= 1)
@@ -338,14 +351,6 @@ namespace KSIM
                     // Reject as no valid stream was identified
                     conn.Close();
                 }
-            }
-            catch (EndOfStreamException ex)
-            {
-                conn.Close();
-            }
-            catch(IOException ex)
-            {
-                conn.Close();
             }
         }
         
