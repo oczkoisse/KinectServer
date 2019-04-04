@@ -191,17 +191,28 @@ namespace KSIM
         {
             lock (connectedAudioClients)
             {
-                connectedAudioClients.Remove(conn);
+                if (connectedAudioClients.Remove(conn))
+                {
+                    conn.Close();
+                    return;
+                }
             }
             lock (connectedClients)
             {
-                connectedClients.Remove(conn);
+                if (connectedClients.Remove(conn))
+                {
+                    conn.Close();
+                    return;
+                }
             }
             lock (connectedVoxSimClients)
             {
-                connectedVoxSimClients.Remove(conn);
+                if (connectedVoxSimClients.Remove(conn))
+                {
+                    conn.Close();
+                    return;
+                }
             }
-            conn.Close();
         }
 
         private void OnReceived(object sender, ReceivedEventArgs e)
