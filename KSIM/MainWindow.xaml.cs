@@ -407,6 +407,11 @@ namespace KSIM
             
             textBox.AppendText($"Phrase \"{result.Text}\" (confidence: {result.Confidence})\n");
             textBox.AppendText($"{result.Semantics["Tag"].Value},{result.Text}\n");
+			if (result.Confidence < Double.Parse(ConfigurationManager.AppSettings["speech_confidence_min"]))
+			{
+				textBox.AppendText($"REJECTED\n");
+				return;
+			}
             textBox.ScrollToEnd();
 
             listSpeechFrame.Enqueue(new SpeechFrame(result));

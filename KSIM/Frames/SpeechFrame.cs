@@ -25,25 +25,22 @@ namespace KSIM.Frames
             this.Type = FrameType.Speech;
 
             Debug.WriteLine("Phrase \"{0}\" (confidence: {1})", r.Text, r.Confidence);
-
-            if (r.Confidence >= phraseConfidence)
+			
+            // temporary stopgap to re-use voxsim side input symbols for the PDA
+            if ("never mind".Equals(r.Text))
             {
-                // temporary stopgap to re-use voxsim side input symbols for the PDA
-                if ("never mind".Equals(r.Text))
-                {
-                    command = string.Format("{0} {1}", r.Semantics["Tag"].Value, r.Text);
-                }
-                else if (r.Text.Contains(" "))
-                {
-                    command = string.Format("{0},{1}", r.Semantics["Tag"].Value, r.Text);
-                }
-                else
-                {
-                    command = string.Format("{0} {1}", r.Semantics["Tag"].Value, r.Text);
-                }
-                Debug.WriteLine(command);
-
+                command = string.Format("{0} {1}", r.Semantics["Tag"].Value, r.Text);
             }
+            else if (r.Text.Contains(" "))
+            {
+                command = string.Format("{0},{1}", r.Semantics["Tag"].Value, r.Text);
+            }
+            else
+            {
+                command = string.Format("{0} {1}", r.Semantics["Tag"].Value, r.Text);
+            }
+            Debug.WriteLine(command);
+			
         }
 
         public SpeechFrame()
