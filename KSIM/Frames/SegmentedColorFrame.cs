@@ -19,15 +19,16 @@ namespace KSIM.Frames
         private Rectangle crop; // Determines area to crop
         private Bitmap croppedColorDataBitMap = null; // Creates a bitmap of the cropped image
 		
-	private Microsoft.Kinect.DepthFrame underlyingDepthFrame = null;
+	    private Microsoft.Kinect.DepthFrame underlyingDepthFrame = null;
+        private ClosestBodyFrame underlyingClosestBodyFrame = null;
 
-	protected Microsoft.Kinect.DepthFrame UnderlyingDepthFrame
-	{
-	    get { return underlyingDepthFrame; }
-	}
 
-	private ClosestBodyFrame underlyingClosestBodyFrame = null;
+        protected Microsoft.Kinect.DepthFrame UnderlyingDepthFrame
+	    {
+	        get { return underlyingDepthFrame; }
+	    }
 
+	    
         protected ClosestBodyFrame UnderlyingClosestBodyFrame
         {
             get { return underlyingClosestBodyFrame; }
@@ -59,6 +60,7 @@ namespace KSIM.Frames
             underlyingClosestBodyFrame = cbf;
 
             SetCenter();
+            SubtractBackground();
 
 			//DepthSpacePoint[] depthToColor = new array 1920x1080
 			//CoordinateMapper.MapColorFrameToDepthSpace(cf, out depthToColor)
@@ -72,6 +74,7 @@ namespace KSIM.Frames
         }
 
         protected abstract void SetCenter();
+        protected abstract void SubtractBackground();
 
 
         private bool isColorInvalid = false;
