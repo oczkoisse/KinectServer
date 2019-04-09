@@ -19,14 +19,14 @@ namespace KSIM.Frames
         private Rectangle crop; // Determines area to crop
         private Bitmap croppedColorDataBitMap = null; // Creates a bitmap of the cropped image
 		
-		private Microsoft.Kinect.DepthFrame underlyingDepthFrame = null;
+	private Microsoft.Kinect.DepthFrame underlyingDepthFrame = null;
 
-		protected Microsoft.Kinect.DepthFrame UnderlyingDepthFrame
-		{
-			get { return underlyingDepthFrame; }
-		}
+	protected Microsoft.Kinect.DepthFrame UnderlyingDepthFrame
+	{
+	    get { return underlyingDepthFrame; }
+	}
 
-		private ClosestBodyFrame underlyingClosestBodyFrame = null;
+	private ClosestBodyFrame underlyingClosestBodyFrame = null;
 
         protected ClosestBodyFrame UnderlyingClosestBodyFrame
         {
