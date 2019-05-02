@@ -1,0 +1,873 @@
+<?xml version="1.0" ?>
+<grammar root="rule" tag-format="semantics/1.0" version="1.0" xml:lang="en-US" xmlns="http://www.w3.org/2001/06/grammar">
+  <rule id="rule">
+    <one-of>
+      <item weight="3">
+        <ruleref uri="#stall"/>
+        <tag>out.Tag=&quot;S&quot;;</tag>
+      </item>
+      <item weight="2">
+        <ruleref uri="#answersFull"/>
+        <tag>out.Tag=&quot;S&quot;;</tag>
+      </item>
+      <item weight="1">
+        <ruleref uri="#nounPhrase"/>
+        <tag>out.Tag=&quot;NP&quot;;</tag>
+      </item>
+      <item weight="1">
+        <ruleref uri="#destFull"/>
+        <tag>out.Tag=&quot;PP&quot;;</tag>
+      </item>
+      <item weight="1">
+        <ruleref uri="#selectFull"/>
+        <tag>out.Tag=&quot;VP&quot;;</tag>
+      </item>
+      <item weight="1">
+        <ruleref uri="#slideFull"/>
+        <tag>out.Tag=&quot;VP&quot;;</tag>
+      </item>
+      <item weight="1">
+        <ruleref uri="#liftmoveFull"/>
+        <tag>out.Tag=&quot;VP&quot;;</tag>
+      </item>
+      <item weight="1">
+        <ruleref uri="#nounNumQFull"/>
+        <tag>out.Tag=&quot;SQ&quot;;</tag>
+      </item>
+      <item weight="1">
+        <ruleref uri="#nounLocQFull"/>
+        <tag>out.Tag=&quot;SQ&quot;;</tag>
+      </item>
+      <item weight="1">
+        <ruleref uri="#wave"/>
+        <tag>out.Tag=&quot;S&quot;;</tag>
+      </item>
+    </one-of>
+  </rule>
+  <rule id="dysfl">
+    <one-of>
+      <item>uh</item>
+      <item>hmm</item>
+    </one-of>
+  </rule>
+  <rule id="wave">
+    <item>
+      <item>
+        <item>
+          <one-of>
+            <item>hello</item>
+            <item>hi</item>
+          </one-of>
+        </item>
+      </item>
+      <item>
+        <item repeat="0-1">
+          <ruleref uri="#diana"/>
+        </item>
+      </item>
+    </item>
+  </rule>
+  <rule id="connectives">
+    <one-of>
+      <item>and</item>
+      <item>then</item>
+      <item>so</item>
+      <item>now</item>
+    </one-of>
+  </rule>
+  <rule id="transition">
+    <item>
+      <item>
+        <item repeat="0-1">
+          <ruleref uri="#dysfl"/>
+        </item>
+      </item>
+      <item>
+        <ruleref uri="#connectives"/>
+      </item>
+      <item>
+        <item repeat="0-1">
+          <ruleref uri="#dysfl"/>
+        </item>
+      </item>
+    </item>
+  </rule>
+  <rule id="politePreambles">
+    <item>
+      <item>
+        <item repeat="0-1">
+          <ruleref uri="#diana"/>
+        </item>
+      </item>
+      <item>
+        <item>
+          <one-of>
+            <item>
+              <item>
+                <item>could</item>
+                <item>you</item>
+              </item>
+            </item>
+            <item>
+              <item>
+                <item>would</item>
+                <item>you</item>
+              </item>
+            </item>
+            <item>
+              <item>
+                <item>can</item>
+                <item>you</item>
+              </item>
+            </item>
+          </one-of>
+        </item>
+      </item>
+    </item>
+  </rule>
+  <rule id="askPreambles">
+    <item>
+      <item>
+        <item repeat="0-1">
+          <one-of>
+            <item>
+              <ruleref uri="#politePreambles"/>
+            </item>
+            <item>
+              <ruleref uri="#diana"/>
+            </item>
+          </one-of>
+        </item>
+      </item>
+      <item>tell</item>
+      <item>me</item>
+    </item>
+  </rule>
+  <rule id="diana">diana</rule>
+  <rule id="stall">
+    <item>
+      <item>
+        <ruleref uri="#transition"/>
+      </item>
+      <item>
+        <item repeat="0-1">
+          <ruleref uri="#politePreambles"/>
+        </item>
+      </item>
+    </item>
+  </rule>
+  <rule id="det">
+    <one-of>
+      <item>a</item>
+      <item>the</item>
+    </one-of>
+  </rule>
+  <rule id="colors">
+    <one-of>
+      <item>red</item>
+      <item>green</item>
+      <item>yellow</item>
+      <item>purple</item>
+      <item>black</item>
+      <item>white</item>
+      <item>orange</item>
+      <item>blue</item>
+      <item>silver</item>
+    </one-of>
+  </rule>
+  <rule id="adjectives">
+    <ruleref uri="#colors"/>
+  </rule>
+  <rule id="demonstrativesSg">
+    <one-of>
+      <item>this</item>
+      <item>that</item>
+    </one-of>
+  </rule>
+  <rule id="demonstrativesPl">
+    <one-of>
+      <item>these</item>
+      <item>those</item>
+    </one-of>
+  </rule>
+  <rule id="detSg">
+    <one-of>
+      <item>a</item>
+      <item>the</item>
+      <item>
+        <ruleref uri="#demonstrativesSg"/>
+      </item>
+    </one-of>
+  </rule>
+  <rule id="detPl">
+    <one-of>
+      <item>the</item>
+      <item>
+        <ruleref uri="#demonstrativesSg"/>
+      </item>
+    </one-of>
+  </rule>
+  <rule id="refs">one</rule>
+  <rule id="atomicNounSg">
+    <one-of>
+      <item>block</item>
+      <item>box</item>
+      <item>mug</item>
+      <item>cup</item>
+      <item>plate</item>
+      <item>spoon</item>
+      <item>fork</item>
+      <item>knife</item>
+    </one-of>
+  </rule>
+  <rule id="atomicNounPl">
+    <one-of>
+      <item>blocks</item>
+      <item>boxes</item>
+      <item>mugs</item>
+      <item>cups</item>
+      <item>plates</item>
+      <item>spoons</item>
+      <item>forks</item>
+      <item>knives</item>
+    </one-of>
+  </rule>
+  <rule id="nounPhraseSg">
+    <one-of>
+      <item>
+        <item>
+          <item>
+            <item>
+              <item repeat="0-1">
+                <ruleref uri="#detSg"/>
+              </item>
+            </item>
+            <item>
+              <item repeat="0-1">
+                <ruleref uri="#adjectives"/>
+              </item>
+            </item>
+            <item>
+              <item repeat="0-1">
+                <ruleref uri="#dysfl"/>
+              </item>
+            </item>
+            <item>
+              <ruleref uri="#atomicNounSg"/>
+            </item>
+          </item>
+        </item>
+      </item>
+      <item>it</item>
+    </one-of>
+  </rule>
+  <rule id="nounPhrasePl">
+    <one-of>
+      <item>
+        <item>
+          <item>
+            <item>
+              <item repeat="0-1">
+                <ruleref uri="#detPl"/>
+              </item>
+            </item>
+            <item>
+              <item repeat="0-1">
+                <ruleref uri="#adjectives"/>
+              </item>
+            </item>
+            <item>
+              <item repeat="0-1">
+                <ruleref uri="#dysfl"/>
+              </item>
+            </item>
+            <item>
+              <ruleref uri="#atomicNounPl"/>
+            </item>
+          </item>
+        </item>
+      </item>
+      <item>them</item>
+    </one-of>
+  </rule>
+  <rule id="nounPhrase">
+    <one-of>
+      <item>
+        <ruleref uri="#nounPhraseSg"/>
+      </item>
+      <item>
+        <ruleref uri="#nounPhrasePl"/>
+      </item>
+    </one-of>
+  </rule>
+  <rule id="xDir">
+    <one-of>
+      <item>left</item>
+      <item>right</item>
+    </one-of>
+  </rule>
+  <rule id="relativeXDir">
+    <item>
+      <item>
+        <item repeat="0-1">
+          <item>
+            <one-of>
+              <item>to</item>
+              <item>on</item>
+            </one-of>
+          </item>
+        </item>
+      </item>
+      <item>
+        <item repeat="0-1">the</item>
+      </item>
+      <item>
+        <ruleref uri="#xDir"/>
+      </item>
+      <item>of</item>
+    </item>
+  </rule>
+  <rule id="relativeFront">
+    <item>
+      <item>in</item>
+      <item>front</item>
+      <item>of</item>
+    </item>
+  </rule>
+  <rule id="relativeBack">
+    <one-of>
+      <item>
+        <item>
+          <item>to</item>
+          <item>
+            <item repeat="0-1">the</item>
+          </item>
+          <item>back</item>
+          <item>of</item>
+        </item>
+      </item>
+      <item>behind</item>
+    </one-of>
+  </rule>
+  <rule id="relativeTop">
+    <item>
+      <item>on</item>
+      <item>
+        <item repeat="0-1">
+          <item>
+            <item>
+              <item repeat="0-1">the</item>
+            </item>
+            <item>top</item>
+            <item>of</item>
+          </item>
+        </item>
+      </item>
+    </item>
+  </rule>
+  <rule id="relativeDest">
+    <item>
+      <item>
+        <item>
+          <one-of>
+            <item>
+              <ruleref uri="#relativeXDir"/>
+            </item>
+            <item>
+              <ruleref uri="#relativeFront"/>
+            </item>
+            <item>
+              <ruleref uri="#relativeBack"/>
+            </item>
+            <item>
+              <ruleref uri="#relativeTop"/>
+            </item>
+          </one-of>
+        </item>
+      </item>
+      <item>
+        <ruleref uri="#nounPhrase"/>
+      </item>
+    </item>
+  </rule>
+  <rule id="absoluteBack">
+    <item>
+      <item>
+        <item>
+          <one-of>
+            <item>at</item>
+            <item>to</item>
+          </one-of>
+        </item>
+      </item>
+      <item>
+        <item repeat="0-1">the</item>
+      </item>
+      <item>back</item>
+      <item>
+        <item repeat="0-1">
+          <item>
+            <item>of</item>
+            <item>
+              <item repeat="0-1">the</item>
+            </item>
+            <item>table</item>
+          </item>
+        </item>
+      </item>
+    </item>
+  </rule>
+  <rule id="absoluteFront">
+    <item>
+      <item>
+        <item>
+          <one-of>
+            <item>at</item>
+            <item>to</item>
+          </one-of>
+        </item>
+      </item>
+      <item>
+        <item repeat="0-1">the</item>
+      </item>
+      <item>front</item>
+      <item>
+        <item repeat="0-1">
+          <item>
+            <item>of</item>
+            <item>
+              <item repeat="0-1">the</item>
+            </item>
+            <item>table</item>
+          </item>
+        </item>
+      </item>
+    </item>
+  </rule>
+  <rule id="absoluteXDir">
+    <item>
+      <item>
+        <item>
+          <one-of>
+            <item>at</item>
+            <item>to</item>
+          </one-of>
+        </item>
+      </item>
+      <item>
+        <item repeat="0-1">the</item>
+      </item>
+      <item>
+        <ruleref uri="#xDir"/>
+      </item>
+      <item>
+        <item repeat="0-1">
+          <item>
+            <item>of</item>
+            <item>
+              <item repeat="0-1">the</item>
+            </item>
+            <item>table</item>
+          </item>
+        </item>
+      </item>
+    </item>
+  </rule>
+  <rule id="absoluteDest">
+    <one-of>
+      <item>
+        <ruleref uri="#absoluteXDir"/>
+      </item>
+      <item>
+        <ruleref uri="#absoluteFront"/>
+      </item>
+      <item>
+        <ruleref uri="#absoluteBack"/>
+      </item>
+      <item>there</item>
+    </one-of>
+  </rule>
+  <rule id="dest">
+    <item>
+      <one-of>
+        <item>
+          <ruleref uri="#absoluteDest"/>
+        </item>
+        <item>
+          <ruleref uri="#relativeDest"/>
+        </item>
+      </one-of>
+    </item>
+  </rule>
+  <rule id="destFull">
+    <item>
+      <item>
+        <item>
+          <item repeat="0-1">
+            <ruleref uri="#transition"/>
+          </item>
+        </item>
+        <item>
+          <ruleref uri="#dest"/>
+        </item>
+      </item>
+    </item>
+  </rule>
+  <rule id="selectVerbs">
+    <one-of>
+      <item>
+        <item>
+          <item>pick</item>
+          <item>up</item>
+        </item>
+      </item>
+      <item>grab</item>
+      <item>lift</item>
+      <item>
+        <ruleref uri="#slideVerbs"/>
+      </item>
+      <item>
+        <ruleref uri="#liftmoveVerbs"/>
+      </item>
+    </one-of>
+  </rule>
+  <rule id="select">
+    <one-of>
+      <item>
+        <item>
+          <item>
+            <ruleref uri="#selectVerbs"/>
+          </item>
+          <item>
+            <item repeat="0-1">
+              <ruleref uri="#dysfl"/>
+            </item>
+          </item>
+          <item>
+            <ruleref uri="#nounPhrase"/>
+          </item>
+        </item>
+      </item>
+      <item>
+        <item>
+          <item>pick</item>
+          <item>
+            <item repeat="0-1">
+              <ruleref uri="#dysfl"/>
+            </item>
+          </item>
+          <item>
+            <ruleref uri="#nounPhrase"/>
+          </item>
+          <item>up</item>
+        </item>
+      </item>
+    </one-of>
+  </rule>
+  <rule id="selectFull">
+    <item>
+      <item>
+        <item>
+          <item repeat="0-1">
+            <ruleref uri="#transition"/>
+          </item>
+        </item>
+        <item>
+          <item repeat="0-1">
+            <ruleref uri="#politePreambles"/>
+          </item>
+        </item>
+        <item>
+          <ruleref uri="#select"/>
+        </item>
+      </item>
+    </item>
+  </rule>
+  <rule id="slideVerbs">
+    <one-of>
+      <item>move</item>
+      <item>slide</item>
+      <item>push</item>
+      <item>pull</item>
+    </one-of>
+  </rule>
+  <rule id="slide">
+    <item>
+      <item>
+        <ruleref uri="#slideVerbs"/>
+      </item>
+      <item>
+        <item repeat="0-1">
+          <ruleref uri="#dysfl"/>
+        </item>
+      </item>
+      <item>
+        <ruleref uri="#nounPhrase"/>
+      </item>
+      <item>
+        <ruleref uri="#dest"/>
+      </item>
+    </item>
+  </rule>
+  <rule id="slideFull">
+    <item>
+      <item>
+        <item>
+          <item repeat="0-1">
+            <ruleref uri="#transition"/>
+          </item>
+        </item>
+        <item>
+          <item repeat="0-1">
+            <ruleref uri="#politePreambles"/>
+          </item>
+        </item>
+        <item>
+          <ruleref uri="#slide"/>
+        </item>
+      </item>
+    </item>
+  </rule>
+  <rule id="liftmoveVerbs">
+    <one-of>
+      <item>put</item>
+      <item>place</item>
+    </one-of>
+  </rule>
+  <rule id="liftmove">
+    <item>
+      <item>
+        <ruleref uri="#liftmoveVerbs"/>
+      </item>
+      <item>
+        <item repeat="0-1">
+          <ruleref uri="#dysfl"/>
+        </item>
+      </item>
+      <item>
+        <ruleref uri="#nounPhrase"/>
+      </item>
+      <item>
+        <ruleref uri="#dest"/>
+      </item>
+    </item>
+  </rule>
+  <rule id="liftmoveFull">
+    <item>
+      <item>
+        <item>
+          <item repeat="0-1">
+            <ruleref uri="#transition"/>
+          </item>
+        </item>
+        <item>
+          <item repeat="0-1">
+            <ruleref uri="#politePreambles"/>
+          </item>
+        </item>
+        <item>
+          <ruleref uri="#liftmove"/>
+        </item>
+      </item>
+    </item>
+  </rule>
+  <rule id="answers">
+    <one-of>
+      <item>no</item>
+      <item>nothing</item>
+      <item>
+        <item>
+          <item>never</item>
+          <item>mind</item>
+        </item>
+      </item>
+      <item>yeah</item>
+      <item>yes</item>
+      <item>please</item>
+      <item>sure</item>
+      <item>okay</item>
+    </one-of>
+  </rule>
+  <rule id="answersFull">
+    <ruleref uri="#answers"/>
+  </rule>
+  <rule id="nounNumQ">
+    <item>
+      <item>how</item>
+      <item>many</item>
+      <item>
+        <ruleref uri="#atomicNounPl"/>
+      </item>
+    </item>
+  </rule>
+  <rule id="seesInv">
+    <one-of>
+      <item>
+        <item>
+          <item>do</item>
+          <item>you</item>
+          <item>see</item>
+        </item>
+      </item>
+      <item>
+        <item>
+          <item>are</item>
+          <item>you</item>
+          <item>seeing</item>
+        </item>
+      </item>
+    </one-of>
+  </rule>
+  <rule id="sees">
+    <one-of>
+      <item>
+        <item>
+          <item>you</item>
+          <item>see</item>
+        </item>
+      </item>
+      <item>
+        <item>
+          <item>you</item>
+          <item>are</item>
+          <item>seeing</item>
+        </item>
+      </item>
+    </one-of>
+  </rule>
+  <rule id="knowsInv">
+    <one-of>
+      <item>
+        <item>
+          <item>are</item>
+          <item>there</item>
+        </item>
+      </item>
+      <item>
+        <item>
+          <item>are</item>
+          <item>on</item>
+          <item>
+            <item repeat="0-1">the</item>
+          </item>
+          <item>table</item>
+        </item>
+      </item>
+    </one-of>
+  </rule>
+  <rule id="knows">
+    <item>
+      <item>there</item>
+      <item>are</item>
+      <item>
+        <item repeat="0-1">
+          <item>
+            <item>on</item>
+            <item>
+              <item repeat="0-1">the</item>
+            </item>
+            <item>table</item>
+          </item>
+        </item>
+      </item>
+    </item>
+  </rule>
+  <rule id="nounNumQDir">
+    <item>
+      <item>
+        <item repeat="0-1">
+          <ruleref uri="#diana"/>
+        </item>
+      </item>
+      <item>
+        <ruleref uri="#nounNumQ"/>
+      </item>
+      <item>
+        <item repeat="0-1">
+          <item>
+            <one-of>
+              <item>
+                <ruleref uri="#seesInv"/>
+              </item>
+              <item>
+                <ruleref uri="#knowsInv"/>
+              </item>
+            </one-of>
+          </item>
+        </item>
+      </item>
+    </item>
+  </rule>
+  <rule id="nounNumQIndir">
+    <item>
+      <item>
+        <ruleref uri="#askPreambles"/>
+      </item>
+      <item>
+        <ruleref uri="#nounNumQ"/>
+      </item>
+      <item>
+        <item>
+          <one-of>
+            <item>
+              <ruleref uri="#sees"/>
+            </item>
+            <item>
+              <ruleref uri="#knows"/>
+            </item>
+          </one-of>
+        </item>
+      </item>
+    </item>
+  </rule>
+  <rule id="nounNumQFull">
+    <item>
+      <one-of>
+        <item>
+          <ruleref uri="#nounNumQDir"/>
+        </item>
+        <item>
+          <ruleref uri="#nounNumQIndir"/>
+        </item>
+      </one-of>
+    </item>
+  </rule>
+  <rule id="nounLocQDir">
+    <item>
+      <item>
+        <item repeat="0-1">
+          <ruleref uri="#diana"/>
+        </item>
+      </item>
+      <item>where</item>
+      <item>is</item>
+      <item>
+        <ruleref uri="#nounPhrase"/>
+      </item>
+    </item>
+  </rule>
+  <rule id="nounLocQIndir">
+    <item>
+      <item>
+        <ruleref uri="#askPreambles"/>
+      </item>
+      <item>where</item>
+      <item>
+        <ruleref uri="#nounPhrase"/>
+      </item>
+      <item>is</item>
+    </item>
+  </rule>
+  <rule id="nounLocQFull">
+    <item>
+      <one-of>
+        <item>
+          <ruleref uri="#nounLocQDir"/>
+        </item>
+        <item>
+          <ruleref uri="#nounLocQIndir"/>
+        </item>
+      </one-of>
+    </item>
+  </rule>
+</grammar>

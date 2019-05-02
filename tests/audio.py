@@ -20,15 +20,15 @@ def connect():
     try:
         sock.connect((src_addr, src_port))
     except:
-        print "Error connecting to {}:{}".format(src_addr, src_port)
+        print("Error connecting to {}:{}".format(src_addr, src_port))
         return None
     try:
-		print "Sending stream info"
-		sock.sendall(struct.pack('<i', stream_id));
+        print("Sending stream info")
+        sock.sendall(struct.pack('<iBi', 5, 1, stream_id));
     except:
-        print "Error: Stream rejected"
+        print("Error: Stream rejected")
         return None
-    print "Successfully connected to host"
+    print("Successfully connected to host")
     return sock
 
 
@@ -66,7 +66,7 @@ def recv_audio_frame(sock):
     To read each stream frame from the server
     """
     (load_size,) = struct.unpack("<i", recv_all(sock, struct.calcsize("<i")))
-    #print load_size
+    #print(load_size)
     return recv_all(sock, load_size)
     
 if __name__ == '__main__':
@@ -91,12 +91,12 @@ if __name__ == '__main__':
             samples = [ int(sm * 32767) if -1.0 <= sm <= 1.0 else (sign(sm) * 32767 ) for sm in samples ]
             if do_write:
                 outwav.writeframes(struct.pack('<' + str(len(samples)) + 'h', *samples))
-            print timestamp, frame_type, sample_count, random.sample(samples, 5), max(samples)
+            print(timestamp, frame_type, sample_count, random.sample(samples, 5), max(samples))
         except:
             
             
             break
-        print "\n\n"
+        print("\n\n")
        
     s.close()
     if do_write:

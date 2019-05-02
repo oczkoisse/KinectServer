@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 src_addr = 'localhost'
 src_port = 8000
 
-stream_id = 16;
+stream_id = 16
 
 def connect():
     """
@@ -20,15 +20,15 @@ def connect():
     try:
         sock.connect((src_addr, src_port))
     except:
-        print "Error connecting to {}:{}".format(src_addr, src_port)
+        print("Error connecting to {}:{}".format(src_addr, src_port))
         return None
     try:
-		print "Sending stream info"
-		sock.sendall(struct.pack('<i', stream_id));
+        print("Sending stream info")
+        sock.sendall(struct.pack('<iBi', 5, 1, stream_id));
     except:
-        print "Error: Stream rejected"
+        print("Error: Stream rejected")
         return None
-    print "Successfully connected to host"
+    print("Successfully connected to host")
     return sock
     
 
@@ -88,24 +88,24 @@ if __name__ == '__main__':
         except:
             s.close()
             break
-        print "Time taken for this frame: {}".format(t_end - t_begin)
+        print("Time taken for this frame: {}".format(t_end - t_begin))
         avg_frame_time += (t_end - t_begin)
         timestamp, frame_type, width, height, depth_data = decode_frame(f)
-        print timestamp, frame_type, width, height
+        print(timestamp, frame_type, width, height)
         
         if do_plot and i % 20 == 0:
             image = np.array(depth_data).reshape((height, width))
             im = plt.imshow(image, cmap='gray')
             plt.show()
 
-        print "\n\n"
+        print("\n\n")
         i += 1
 
-    print "Total frame time: {}".format(avg_frame_time)
+    print("Total frame time: {}".format(avg_frame_time))
 
     avg_frame_time /= i
     
-    print "Average frame time over {} frames: {}".format(i, avg_frame_time)
+    print("Average frame time over {} frames: {}".format(i, avg_frame_time))
 
     s.close()
     sys.exit(0)

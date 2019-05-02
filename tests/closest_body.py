@@ -1,11 +1,14 @@
 import socket
 import struct
 import time
+import sys
+
+from decode import read_frame
 
 src_addr = 'localhost'
 src_port = 8000
 
-stream_id = 32;
+stream_id = 32
 
 def connect():
     """
@@ -17,28 +20,30 @@ def connect():
     try:
         sock.connect((src_addr, src_port))
     except:
-        print "Error connecting to {}:{}".format(src_addr, src_port)
+        print("Error connecting to {}:{}".format(src_addr, src_port))
         return None
     try:
-		print "Sending stream info"
-		sock.sendall(struct.pack('<i', stream_id));
+        print("Sending stream info")
+        sock.sendall(struct.pack('<iBi', 5, 1, stream_id));
     except:
-        print "Error: Stream rejected"
+        print("Error: Stream rejected")
         return None
-    print "Successfully connected to host"
+    print("Successfully connected to host")
     return sock
 
 
-def decode_frame(raw_frame):
-    # The format is given according to the following assumption of network data
-
-    # Expect little endian byte order
+def decode_content(raw_frame, offset):
+    """
+    raw_frame: frame starting from 4 to end (4 for length field)
+    offset: index where header ends; header is header_l, timestamp, frame_type
+    """
     endianness = "<"
 
-    # [ commonTimestamp | frame type | Tracked body count | Engaged
-    header_format = "qiBB"
+    content_header_format = "BB"  # Tracked body count | Engaged
+    content_header_size = struct.calcsize(endianness + content_header_format)
+    content_header = struct.unpack_from(endianness + content_header_format, raw_frame, offset)
 
-    timestamp, frame_type, tracked_body_count, engaged = struct.unpack(endianness + header_format, raw_frame[:struct.calcsize(header_format)])
+    tracked_body_count, engaged = content_header
 
     # For each body, a header is transmitted
     # TrackingId | HandLeftConfidence | HandLeftState | HandRightConfidence | HandRightState ]
@@ -50,32 +55,15 @@ def decode_frame(raw_frame):
 
     frame_format = body_format + (joint_format * 25)
 
-    
     # Unpack the raw frame into individual pieces of data as a tuple
-    frame_pieces = struct.unpack(endianness + (frame_format * (1 if engaged else 0)), raw_frame[struct.calcsize(header_format):])
-    
-    decoded = (timestamp, frame_type, tracked_body_count, engaged) + frame_pieces
+    frame_pieces = struct.unpack_from(endianness + (frame_format * engaged), raw_frame, offset + content_header_size)
 
-    return decoded
+    # decoded = (tracked_body_count, engaged) + frame_pieces
+    decoded = (tracked_body_count, engaged, frame_pieces)
+    offset = offset + content_header_size + struct.calcsize(
+        endianness + frame_format * engaged)  # new offset from where tail starts
+    return decoded, offset
 
-
-def recv_all(sock, size):
-    result = b''
-    while len(result) < size:
-        data = sock.recv(size - len(result))
-        if not data:
-            raise EOFError("Error: Received only {} bytes into {} byte message".format(len(data), size))
-        result += data
-    return result
-
-
-def recv_skeleton_frame(sock):
-    """
-    To read each stream frame from the server
-    """
-    (load_size,) = struct.unpack("<i", recv_all(sock, struct.calcsize("<i")))
-    #print load_size
-    return recv_all(sock, load_size)
     
 if __name__ == '__main__':
     s = connect()
@@ -86,19 +74,18 @@ if __name__ == '__main__':
     count = 0
     while True:
         try:
-            f = recv_skeleton_frame(s)
+            (timestamp, frame_type), (tracked_body_count, engaged, frame_pieces), (writer_data,) = read_frame(s, decode_content)
         except:
             s.close()
             break
-        
-        timestamp, frame_type, tracked_body_count, engaged = decode_frame(f)[:4]
-        #print timestamp, frame_type, tracked_body_count, 'Engaged' if engaged else 'Not Engaged'
-        #print "\n\n"
+
+        print("{:<20d} {:<4d} {:<4d} {:<5s} '{}'".format(timestamp, frame_type, tracked_body_count, str(engaged > 0), writer_data.decode('ascii')))
+        print("\n\n")
 
         count += 1
         if count == 100:
-            print '='*30
-            print 'FPS: ', 100.0 / (time.time() - start_time)
-            print '='*30
+            print('='*30)
+            print('FPS: ', 100.0 / (time.time() - start_time))
+            print('='*30)
             start_time = time.time()
             count = 0
