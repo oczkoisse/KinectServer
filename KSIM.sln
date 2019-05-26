@@ -5,7 +5,7 @@ VisualStudioVersion = 15.0.28307.168
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KSIM", "KSIM\KSIM.csproj", "{179D489C-E4DD-42C4-9776-72F78AE6B4D0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleServer", "..\SimpleServer\SimpleServer\SimpleServer.csproj", "{243F0485-67B4-4C83-8F9C-D586ECE951D7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimpleNetworking", "SimpleNetworking\SimpleNetworking\SimpleNetworking.csproj", "{19FB46B4-08DA-4A12-81B4-8E010EC87E37}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,14 +23,14 @@ Global
 		{179D489C-E4DD-42C4-9776-72F78AE6B4D0}.Release|Any CPU.Build.0 = Release|Any CPU
 		{179D489C-E4DD-42C4-9776-72F78AE6B4D0}.Release|x86.ActiveCfg = Release|x86
 		{179D489C-E4DD-42C4-9776-72F78AE6B4D0}.Release|x86.Build.0 = Release|x86
-		{243F0485-67B4-4C83-8F9C-D586ECE951D7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{243F0485-67B4-4C83-8F9C-D586ECE951D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{243F0485-67B4-4C83-8F9C-D586ECE951D7}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{243F0485-67B4-4C83-8F9C-D586ECE951D7}.Debug|x86.Build.0 = Debug|Any CPU
-		{243F0485-67B4-4C83-8F9C-D586ECE951D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{243F0485-67B4-4C83-8F9C-D586ECE951D7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{243F0485-67B4-4C83-8F9C-D586ECE951D7}.Release|x86.ActiveCfg = Release|Any CPU
-		{243F0485-67B4-4C83-8F9C-D586ECE951D7}.Release|x86.Build.0 = Release|Any CPU
+		{19FB46B4-08DA-4A12-81B4-8E010EC87E37}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19FB46B4-08DA-4A12-81B4-8E010EC87E37}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{19FB46B4-08DA-4A12-81B4-8E010EC87E37}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{19FB46B4-08DA-4A12-81B4-8E010EC87E37}.Debug|x86.Build.0 = Debug|Any CPU
+		{19FB46B4-08DA-4A12-81B4-8E010EC87E37}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19FB46B4-08DA-4A12-81B4-8E010EC87E37}.Release|Any CPU.Build.0 = Release|Any CPU
+		{19FB46B4-08DA-4A12-81B4-8E010EC87E37}.Release|x86.ActiveCfg = Release|Any CPU
+		{19FB46B4-08DA-4A12-81B4-8E010EC87E37}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

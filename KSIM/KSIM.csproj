@@ -337,9 +337,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\SimpleServer\SimpleServer\SimpleServer.csproj">
-      <Project>{243f0485-67b4-4c83-8f9c-d586ece951d7}</Project>
-      <Name>SimpleServer</Name>
+    <ProjectReference Include="..\SimpleNetworking\SimpleNetworking\SimpleNetworking.csproj">
+      <Project>{19fb46b4-08da-4a12-81b4-8e010ec87e37}</Project>
+      <Name>SimpleNetworking</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
