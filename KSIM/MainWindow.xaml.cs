@@ -16,7 +16,7 @@ using Mono.Options;
 
 using KSIM.Frames;
 using KSIM.Kinect;
-using SimpleServer;
+using SimpleNetworking;
 
 namespace KSIM
 {
@@ -220,9 +220,7 @@ namespace KSIM
             Connection conn = e.GetConnection();
             if (e.OperationSucceeded)
             {
-                Packet packet = e.GetPacket();
-
-                using (MemoryStream ms = new MemoryStream(packet.Data.Array))
+                using (MemoryStream ms = new MemoryStream(e.Data))
                 {
                     using (BinaryReader br = new BinaryReader(ms))
                     {
@@ -512,7 +510,7 @@ namespace KSIM
                     {
                         foreach (var client in connectedAudioClients)
                         {
-                            client.Write(new Packet(dataToSend));
+                            client.Write(dataToSend);
                         }
                     }
                 }
@@ -629,7 +627,7 @@ namespace KSIM
                         {
                             cachedFrames[frameType].Serialize(ms);
                             byte[] dataToSend = ms.ToArray();
-                            client.Write(new Packet(dataToSend));
+                            client.Write(dataToSend);
                         }
                     }
                 }
